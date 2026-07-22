@@ -8,7 +8,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import yaml
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from app import models as m
@@ -69,6 +69,12 @@ def load_module(db: Session, yaml_path: str | Path, *, validate: bool = True) ->
     # (Core delete(Module) ORM-каскады НЕ запускает → дубли в дочерних таблицах.)
     existing = db.get(m.Module, code)
     if existing:
+        # снять ссылки intake_directions.module_code на этот код перед удалением —
+        # иначе FK-ограничение блокирует DELETE (Postgres проверяет строго, в отличие
+        # от SQLite; на re-load после первого успешного запуска ссылка уже существует).
+        # load_intake() всё равно позже пересоздаст все intake_directions с нуля.
+        db.execute(update(m.IntakeDirection).where(m.IntakeDirection.module_code == code)
+                  .values(module_code=None))
         db.delete(existing)
         db.flush()
 

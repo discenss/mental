@@ -1,3 +1,48 @@
+## ⚡ Статус: развёрнуто и работает (2026-07-22)
+
+Backend + bot **живут на сервере** в Docker (polling-режим — домен ещё не куплен, webhook отложен).
+- Путь: `/home/administrator/mental` (НЕ `/srv` — туда нужен sudo, а его не было; можно перенести позже).
+- Контейнеры: `mental-db` / `mental-backend` (127.0.0.1:8010) / `mental-bot` — все `Up (healthy)`.
+- Бот: polling, тот же токен `discens_test_bot`, что использовался локально.
+- Домен `mental.rhythmos.online` **не куплен/не привязан** — DNS сейчас указывает на другой IP
+  (91.206.200.90, hosting-99.default-host.net) от прежнего использования поддомена. Nginx/certbot/
+  webhook — отложены до покупки домена (см. §5–6 ниже, когда дойдёт время).
+- SSH: мой ключ (`id_ed25519`, комментарий `discens-linux`) добавлен в
+  `administrator@108.181.215.222:~/.ssh/authorized_keys` — хожу по ключу, без пароля.
+  `sudo` на сервере требует отдельный пароль (не запрашивался — пока не нужен без nginx/certbot).
+
+### Три бага нашлись ТОЛЬКО на Postgres (локально маскировались SQLite)
+1. **Миграция `e3c4d5f6a7b8`** — `UPDATE daily_entries SET morning_done = 1` (сырой SQL с
+   integer-литералом) падал на Postgres (`DatatypeMismatch`, boolean ожидает `true`/`false`).
+   SQLite молча принимал `1`. Фикс: через `sqlalchemy.table()`-конструкцию с `values(...=True)` —
+   компилируется правильно под оба диалекта.
+2. **`content_loader.load_module`** — идемпотентная перезагрузка модуля (`db.delete(existing)`)
+   падала с `ForeignKeyViolation`: `intake_directions.module_code` ссылается на `modules.code`,
+   Postgres проверяет FK строго при каждом рестарте контейнера (после первого успешного запуска
+   ссылка уже существует), SQLite — нет (FK enforcement выключен по умолчанию). Фикс: перед
+   удалением модуля обнулять `IntakeDirection.module_code` у ссылающихся строк (их всё равно
+   пересоздаст `load_intake()` следом).
+3. **`backend/requirements.txt`** не содержал `pytz`, хотя `services/settings.py` его использует —
+   локально работало, т.к. backend и bot делят один venv (rhythmos), а `pytz` стоял только в
+   `bot/requirements.txt`. На сервере контейнеры изолированы → `ModuleNotFoundError`. Добавлен в
+   `backend/requirements.txt`.
+
+Все три фикса внесены в код и запушены на сервер; финальный `docker-compose up -d --build backend`
+прошёл чисто, включая повторную (идемпотентную) загрузку контента поверх уже заполненной БД.
+
+### Локальный дев-бот отключён
+Тот же `discens_test_bot`-токен теперь polling на сервере — **локальный бот/бэкенд остановлены**
+(иначе конфликт `TelegramConflictError`). Для локальной разработки в будущем понадобится либо
+отдельный dev-токен от @BotFather, либо временно останавливать серверный контейнер бота.
+
+### Что ещё не сделано
+- Push кода на GitHub (репозиторий локально инициализирован, `git remote` не добавлен — ждём URL).
+- Домен + nginx + certbot + webhook (когда будет куплен `mental.rhythmos.online` или другой).
+- Аудио-практики на сервер (отдельным шагом, см. `.gitignore`/`.dockerignore` — не переносились).
+- Ротация пароля `administrator` на сервере (использовался один раз для установки SSH-ключа).
+
+---
+
 # Деплой Mental Club на VPS (рядом с rhythmos)
 
 Тот же сервер, что rhythmos (108.181.215.222, домен rhythmos.online), Docker + docker-compose,

@@ -15,3 +15,4 @@ content/modules/_fragments/
 **/.env.prod
 !.env.example
 !**/.env.prod.example
+cred.txt
