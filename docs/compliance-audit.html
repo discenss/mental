@@ -1,0 +1,339 @@
+<title>Mental Club — аудит соответствия v1.0</title>
+<style>
+  :root {
+    --paper: #F7F5F1;
+    --paper-raised: #FFFFFF;
+    --ink: #23201C;
+    --ink-soft: #565049;
+    --ink-faint: #8A837A;
+    --rule: #E4DED3;
+    --rule-strong: #D3CABB;
+    --accent: #3F6E6A;
+    --accent-soft: #E7EEED;
+    --crit: #B4472F;
+    --crit-bg: #F6E5E0;
+    --med: #B07C1E;
+    --med-bg: #F6EDD8;
+    --ok: #4C7A52;
+    --ok-bg: #E6EFE6;
+    --shadow: 0 1px 2px rgba(35,32,28,.05), 0 4px 16px rgba(35,32,28,.05);
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace, "Cascadia Code", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #1A1917;
+      --paper-raised: #24221F;
+      --ink: #EFE9DF;
+      --ink-soft: #B6AEA1;
+      --ink-faint: #857D71;
+      --rule: #33302B;
+      --rule-strong: #423E38;
+      --accent: #7FB4AE;
+      --accent-soft: #22302E;
+      --crit: #E08869;
+      --crit-bg: #382520;
+      --med: #DDB05A;
+      --med-bg: #362D18;
+      --ok: #86B98B;
+      --ok-bg: #1F2E20;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="light"] {
+    --paper: #F7F5F1; --paper-raised: #FFFFFF; --ink: #23201C; --ink-soft: #565049;
+    --ink-faint: #8A837A; --rule: #E4DED3; --rule-strong: #D3CABB; --accent: #3F6E6A;
+    --accent-soft: #E7EEED; --crit: #B4472F; --crit-bg: #F6E5E0; --med: #B07C1E;
+    --med-bg: #F6EDD8; --ok: #4C7A52; --ok-bg: #E6EFE6;
+    --shadow: 0 1px 2px rgba(35,32,28,.05), 0 4px 16px rgba(35,32,28,.05);
+  }
+  :root[data-theme="dark"] {
+    --paper: #1A1917; --paper-raised: #24221F; --ink: #EFE9DF; --ink-soft: #B6AEA1;
+    --ink-faint: #857D71; --rule: #33302B; --rule-strong: #423E38; --accent: #7FB4AE;
+    --accent-soft: #22302E; --crit: #E08869; --crit-bg: #382520; --med: #DDB05A;
+    --med-bg: #362D18; --ok: #86B98B; --ok-bg: #1F2E20;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.3);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    font-size: 16px;
+  }
+  .wrap { max-width: 1020px; margin: 0 auto; padding: clamp(28px, 5vw, 72px) clamp(18px, 4vw, 40px) 96px; }
+
+  /* ---- Masthead ---- */
+  .masthead { border-bottom: 2px solid var(--ink); padding-bottom: 22px; margin-bottom: 34px; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 14px;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 600; font-size: clamp(30px, 5vw, 46px);
+    line-height: 1.08; letter-spacing: -.01em; text-wrap: balance; margin: 0 0 16px;
+  }
+  .lede { font-size: clamp(16px, 2.2vw, 18px); color: var(--ink-soft); max-width: 64ch; margin: 0; }
+  .meta-row {
+    display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 22px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--ink-faint);
+  }
+  .meta-row b { color: var(--ink-soft); font-weight: 500; }
+
+  /* ---- Scorecard ---- */
+  .scorecard {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px; margin: 0 0 46px;
+  }
+  .tile {
+    background: var(--paper-raised); border: 1px solid var(--rule); border-radius: 10px;
+    padding: 18px 20px; box-shadow: var(--shadow); position: relative; overflow: hidden;
+  }
+  .tile::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--stripe, var(--accent)); }
+  .tile.crit { --stripe: var(--crit); }
+  .tile.med { --stripe: var(--med); }
+  .tile.ok { --stripe: var(--ok); }
+  .tile .num {
+    font-family: var(--serif); font-size: 40px; font-weight: 600; line-height: 1;
+    font-variant-numeric: tabular-nums; color: var(--ink);
+  }
+  .tile .lbl { font-size: 13px; color: var(--ink-soft); margin-top: 8px; }
+  .tile .sub { font-size: 12px; color: var(--ink-faint); margin-top: 2px; }
+
+  /* ---- Section ---- */
+  .section { margin: 0 0 40px; }
+  .section-head { display: flex; align-items: baseline; gap: 12px; margin: 0 0 6px; }
+  .section-head h2 {
+    font-family: var(--serif); font-weight: 600; font-size: 22px; margin: 0; letter-spacing: -.01em;
+  }
+  .dot { width: 11px; height: 11px; border-radius: 50%; flex: none; transform: translateY(1px); }
+  .dot.crit { background: var(--crit); }
+  .dot.med { background: var(--med); }
+  .dot.ok { background: var(--ok); }
+  .section-note { color: var(--ink-faint); font-size: 14px; margin: 0 0 20px; padding-left: 23px; }
+
+  /* ---- Finding cards ---- */
+  .findings { display: flex; flex-direction: column; gap: 14px; }
+  .card {
+    background: var(--paper-raised); border: 1px solid var(--rule); border-radius: 12px;
+    box-shadow: var(--shadow); padding: 20px 22px 20px 24px; position: relative;
+  }
+  .card::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; border-radius: 3px; background: var(--cstripe, var(--accent)); }
+  .card.crit { --cstripe: var(--crit); }
+  .card.med { --cstripe: var(--med); }
+  .card-top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .badge {
+    font-family: var(--mono); font-size: 11.5px; letter-spacing: .04em; font-weight: 600;
+    padding: 3px 9px; border-radius: 5px; white-space: nowrap;
+  }
+  .badge.spec { background: var(--accent-soft); color: var(--accent); }
+  .badge.st-crit { background: var(--crit-bg); color: var(--crit); }
+  .badge.st-med { background: var(--med-bg); color: var(--med); }
+  .card-title { font-weight: 650; font-size: 16.5px; margin: 0; flex: 1 1 240px; letter-spacing: -.005em; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; margin-top: 4px; }
+  .cell { padding: 12px 15px; }
+  .cell + .cell { border-left: 1px solid var(--rule); }
+  .cell .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin: 0 0 5px; }
+  .cell.req { background: color-mix(in srgb, var(--accent-soft) 40%, transparent); }
+  .cell .v { font-size: 14px; color: var(--ink-soft); margin: 0; }
+  .cell .v b { color: var(--ink); font-weight: 600; }
+  .loc { display: block; font-family: var(--mono); font-size: 12px; color: var(--accent); margin-top: 9px; word-break: break-word; }
+
+  /* ---- Compliant strip ---- */
+  .ok-list { display: flex; flex-direction: column; gap: 9px; }
+  .ok-item {
+    display: flex; gap: 12px; align-items: flex-start; background: var(--paper-raised);
+    border: 1px solid var(--rule); border-left: 3px solid var(--ok); border-radius: 8px; padding: 12px 16px;
+  }
+  .ok-item .check { color: var(--ok); font-weight: 700; flex: none; font-family: var(--mono); }
+  .ok-item .txt { font-size: 14px; }
+  .ok-item .txt b { font-family: var(--mono); font-weight: 600; color: var(--ink); font-size: 13px; }
+
+  footer {
+    margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--rule);
+    color: var(--ink-faint); font-size: 12.5px; font-family: var(--mono); line-height: 1.7;
+  }
+  a { color: var(--accent); }
+
+  @media (max-width: 620px) {
+    .grid2 { grid-template-columns: 1fr; }
+    .cell + .cell { border-left: none; border-top: 1px solid var(--rule); }
+  }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <p class="eyebrow">Mental Club · аудит соответствия</p>
+    <h1>Реализация против Стандарта архитектуры модулей v1.0</h1>
+    <p class="lede">Каркас и «мозги» продукта — интейк, зоны, critical-logic, постмодульное разделение, типизация сущностей — сделаны по стандарту и математически валидны. Все расхождения лежат в двух местах: слой предъявления в боте и незавершённый runtime дневника и финального продукта.</p>
+    <div class="meta-row">
+      <span><b>Область:</b> content · backend · bot</span>
+      <span><b>Норматив:</b> Стандарт v1.0 (§1–§22)</span>
+      <span><b>Модули:</b> BOUND · REAL</span>
+      <span><b>Метод:</b> статический аудит кода и YAML</span>
+    </div>
+  </header>
+
+  <section class="scorecard" aria-label="Сводка">
+    <div class="tile crit">
+      <div class="num">4</div>
+      <div class="lbl">Критичных расхождения</div>
+      <div class="sub">обязательные элементы, которых нет для пользователя</div>
+    </div>
+    <div class="tile med">
+      <div class="num">3</div>
+      <div class="lbl">Средних</div>
+      <div class="sub">порядок и форма дневного Flow</div>
+    </div>
+    <div class="tile ok">
+      <div class="num">7</div>
+      <div class="lbl">Разделов по стандарту</div>
+      <div class="sub">интейк, зоны, critical, postmodule, §19…</div>
+    </div>
+    <div class="tile">
+      <div class="num">12 / 12</div>
+      <div class="lbl">Недель прошли матпроверку зон</div>
+      <div class="sub">10 вопросов, диапазоны без разрывов</div>
+    </div>
+  </section>
+
+  <!-- CRITICAL -->
+  <section class="section">
+    <div class="section-head"><span class="dot crit"></span><h2>Критичные</h2></div>
+    <p class="section-note">Обязательные элементы стандарта (§17), которых реальный пользователь сейчас не получает.</p>
+    <div class="findings">
+
+      <article class="card crit">
+        <div class="card-top">
+          <span class="badge spec">§7</span>
+          <span class="badge st-crit">НЕ СООТВЕТСТВУЕТ</span>
+          <h3 class="card-title">Вводный экран недели не показывается</h3>
+        </div>
+        <div class="grid2">
+          <div class="cell req"><p class="k">Стандарт требует</p><p class="v">Каждая неделя начинается <b>не с дня 1</b>, а с 4 блоков: вводный экран, смысл, цель, результат недели.</p></div>
+          <div class="cell"><p class="k">В реализации</p><p class="v">Данные есть в YAML (<b>intro_screen / meaning / goal / result</b>) и в моделях, но бот прыгает сразу в «Неделя N, день 1». API эти поля даже не запрашивает.<span class="loc">bot/handlers/flow.py:101</span></p></div>
+        </div>
+      </article>
+
+      <article class="card crit">
+        <div class="card-top">
+          <span class="badge spec">§14</span>
+          <span class="badge st-crit">НЕ СООТВЕТСТВУЕТ</span>
+          <h3 class="card-title">Финальный личный продукт не сохраняется</h3>
+        </div>
+        <div class="grid2">
+          <div class="cell req"><p class="k">Стандарт требует</p><p class="v">Обязательный <b>сохраняемый</b> личный продукт модуля (протокол / ориентир), собирающий ответы пользователя.</p></div>
+          <div class="cell"><p class="k">В реализации</p><p class="v">Шаблон грузится, но экземпляр <b>FinalProductInstance</b> не создаётся ни одним сервисом или эндпоинтом — 0 конструкторов. В runtime продукта нет.<span class="loc">backend/app/models.py:311</span></p></div>
+        </div>
+      </article>
+
+      <article class="card crit">
+        <div class="card-top">
+          <span class="badge spec">§15</span>
+          <span class="badge st-crit">НЕ СООТВЕТСТВУЕТ</span>
+          <h3 class="card-title">Постмодульный тест не вызывается в боте</h3>
+        </div>
+        <div class="grid2">
+          <div class="cell req"><p class="k">Стандарт требует</p><p class="v">После модуля — маршрутизация по смежным темам: <b>REAL</b> = тест 21 вопрос, <b>BOUND</b> = накопленные flags.</p></div>
+          <div class="cell"><p class="k">В реализации</p><p class="v">Backend готов, <b>/postmodule</b> не заблокирован тест-режимом. Но <b>api.postmodule()</b> в хендлерах не вызывается: юзер по завершении видит только «Итог модуля (ИИ)». Тест живёт лишь в тест-режиме.<span class="loc">bot/api.py:107 · bot/handlers/flow.py:83-88</span></p></div>
+        </div>
+      </article>
+
+      <article class="card crit">
+        <div class="card-top">
+          <span class="badge spec">§12</span>
+          <span class="badge st-crit">НЕ СООТВЕТСТВУЕТ</span>
+          <h3 class="card-title">Дневник недоэмитит обязательные записи</h3>
+        </div>
+        <div class="grid2">
+          <div class="cell req"><p class="k">Стандарт требует</p><p class="v">Сохранять: ответы на задания, выводы дня 7, финальный продукт (плюс рефлексию и заметки).</p></div>
+          <div class="cell"><p class="k">В реализации</p><p class="v">В journal попадают только <b>reflection</b> и <b>note</b>. <b>task_answer</b> собирается, но в дневник не переносится; выводов дня 7 и продукта нет. Что нельзя (маркеры / квиз / самопроверка) — корректно не попадает.<span class="loc">backend/app/services/progression.py:109-132</span></p></div>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- MEDIUM -->
+  <section class="section">
+    <div class="section-head"><span class="dot med"></span><h2>Средние</h2></div>
+    <p class="section-note">Порядок и форма дневного Flow расходятся с каноном §6 / §8 / §9.</p>
+    <div class="findings">
+
+      <article class="card med">
+        <div class="card-top">
+          <span class="badge spec">§6</span>
+          <span class="badge st-med">ЧАСТИЧНО</span>
+          <h3 class="card-title">Порядок дневного Flow нарушен</h3>
+        </div>
+        <div class="grid2">
+          <div class="cell req"><p class="k">Стандарт требует</p><p class="v">День = <b>задание → отметка → аудио → квиз</b>; фокус и задание — разные сущности.</p></div>
+          <div class="cell"><p class="k">В реализации</p><p class="v">Задание показано <b>утром</b> без статуса, а статус + квиз — <b>вечером</b>; квиз оказался перед вечерними маркерами; фокус слит с заданием в один текст.<span class="loc">bot/handlers/flow.py:38-57</span></p></div>
+        </div>
+      </article>
+
+      <article class="card med">
+        <div class="card-top">
+          <span class="badge spec">§8.4</span>
+          <span class="badge st-med">НЕ СООТВЕТСТВУЕТ</span>
+          <h3 class="card-title">Аудио — не кнопкой и не на месте</h3>
+        </div>
+        <div class="grid2">
+          <div class="cell req"><p class="k">Стандарт требует</p><p class="v">Кнопка «Аудио» между статусом задания и квизом; аудиокарта 24/модуль.</p></div>
+          <div class="cell"><p class="k">В реализации</p><p class="v">Аудио вклеено <b>текстовой строкой</b> в утренний фокус-блок, кнопки/проигрывания нет; backend отдаёт только код без URL. Валидация «24» и слоты A1/A2/A3/FINAL — корректны.<span class="loc">bot/handlers/flow.py:39-41 · backend …/progression.py:105</span></p></div>
+        </div>
+      </article>
+
+      <article class="card med">
+        <div class="card-top">
+          <span class="badge spec">§9</span>
+          <span class="badge st-med">ЧАСТИЧНО</span>
+          <h3 class="card-title">День 7 не оформлен как 8-шаговый поток</h3>
+        </div>
+        <div class="grid2">
+          <div class="cell req"><p class="k">Стандарт требует</p><p class="v">8 шагов единым потоком: итог.фокус → задание → FINAL-аудио → квиз → рефлексия → самопроверка → интерпретация → рекомендация.</p></div>
+          <div class="cell"><p class="k">В реализации</p><p class="v">День 7 идёт общим движком дня (отличие — слот FINAL); самопроверка вынесена в отдельный статус <b>selfcheck_due</b> и экран. Финальная тройка (интерпретация → рекомендация → critical) на экране результата присутствует.<span class="loc">backend …/progression.py:79-106 · bot flow.py:89-93</span></p></div>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- POLISH -->
+  <section class="section">
+    <div class="section-head"><span class="dot ok" style="background:var(--ink-faint)"></span><h2>Мелкие · полировка</h2></div>
+    <p class="section-note">Не жёсткие нарушения — контент и внутренний текст.</p>
+    <div class="ok-list">
+      <div class="ok-item" style="border-left-color:var(--ink-faint)"><span class="check">§13</span><span class="txt">У всех <b>24</b> аудиозаписей обоих модулей <b>theme: None</b> — тематическая привязка пуста (аудиоскрипты ещё не наполнены). Коды, слоты, счётчик 24 — верны.</span></div>
+      <div class="ok-item" style="border-left-color:var(--ink-faint)"><span class="check">§8.5</span><span class="txt">В BOUND встречаются квизы с 3 вариантами (реком. 4–6) и 33 дня без опции «я не выполнял задание». Это мягкая рекомендация; в REAL все квизы по 5 вариантов.</span></div>
+      <div class="ok-item" style="border-left-color:var(--ink-faint)"><span class="check">§16</span><span class="txt">Слово <b>score</b> и вывод балла просачиваются в сообщение <b>тест-режима</b> (texts.py:160, 171) — уходит тестировщику, не обычному пользователю.</span></div>
+      <div class="ok-item" style="border-left-color:var(--ink-faint)"><span class="check">§8</span><span class="txt">Возможное дублирование источника tie-priority: <b>intake.py:36</b> берёт cfg.tie_priority, при этом у каждого direction есть своё поле tie_priority (models.py:179). Работает, но два источника правды.</span></div>
+    </div>
+  </section>
+
+  <!-- COMPLIANT -->
+  <section class="section">
+    <div class="section-head"><span class="dot ok"></span><h2>Полностью по стандарту</h2></div>
+    <p class="section-note">Проверено и подтверждено — эти разделы менять не нужно.</p>
+    <div class="ok-list">
+      <div class="ok-item"><span class="check">✓</span><span class="txt"><b>Интейк</b> — 30 вопросов, суммы по 3, порог 7, сортировка и tie-priority точно по спеке подбора маршрута.</span></div>
+      <div class="ok-item"><span class="check">✓</span><span class="txt"><b>§9.4 Самопроверка</b> — ровно 10 вопросов во всех 12 неделях, веса скрыты от пользователя, переход в следующую неделю не блокируется зоной.</span></div>
+      <div class="ok-item"><span class="check">✓</span><span class="txt"><b>§10 Зоны</b> — все 4 обязательных поля; математика диапазонов чиста: GREEN/YELLOW/RED взаимоисключающие, без разрывов, покрывают весь score-range (проверено по всем неделям).</span></div>
+      <div class="ok-item"><span class="check">✓</span><span class="txt"><b>§11 Critical-logic</b> — refs {q,opt}+min_hits; не меняет score, не блокирует неделю, добавляет тематический текст.</span></div>
+      <div class="ok-item"><span class="check">✓</span><span class="txt"><b>§15 Разделение</b> — postmodule пишется в отдельную таблицу (PostmoduleResult), не смешан с weekly score.</span></div>
+      <div class="ok-item"><span class="check">✓</span><span class="txt"><b>§19 Типизация</b> — сущности разнесены по таблицам, нет универсального content_block без типа.</span></div>
+      <div class="ok-item"><span class="check">✓</span><span class="txt"><b>§8.6 Рефлексия</b> — ровно 3 вопроса в каждом дне обоих модулей; свободный текст необязателен.</span></div>
+    </div>
+  </section>
+
+  <footer>
+    Источники: content/intake.yaml · content/modules/{bound,real}.yaml · backend/app/services/* · backend/app/models.py · bot/handlers/* · bot/api.py<br>
+    Норматив: Mental_Club_ТОЧНЫЙ_СТАНДАРТ_АРХИТЕКТУРЫ_МОДУЛЕЙ_v1_0 · Оценка_состояния_и_подбор_личного_маршрута<br>
+    Аудит статический — фактическое runtime-поведение не прогонялось. Приоритеты 1–4 — то, что реальный пользователь недополучает.
+  </footer>
+</div>

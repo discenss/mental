@@ -1,0 +1,65 @@
+# Production Docker Compose — Mental Club
+# Живёт рядом с rhythmos на том же VPS: свои имена/сеть/тома, порты 8010/8011
+# (rhythmos занимает 8000/8001). Host nginx проксирует mental.rhythmos.online → эти порты.
+# Запуск:  docker-compose -f docker-compose.prod.yml up -d --build
+
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: mental-db
+    environment:
+      POSTGRES_DB: ${DB_NAME:-mental}
+      POSTGRES_USER: ${DB_USER:-mental}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+    volumes:
+      - pgdata_mental:/var/lib/postgresql/data
+    networks: [mental-network]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-mental}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging: { driver: "json-file", options: { max-size: "10m", max-file: "3" } }
+
+  backend:
+    build: { context: ./backend, dockerfile: Dockerfile }
+    container_name: mental-backend
+    ports:
+      - "127.0.0.1:8010:8000"          # nginx проксирует сюда (API)
+    env_file: ./backend/.env.prod
+    environment:
+      - DATABASE_URL=postgresql+psycopg://${DB_USER:-mental}:${DB_PASSWORD}@db:5432/${DB_NAME:-mental}
+      - CONTENT_DIR=/content
+    volumes:
+      - ./content:/content:ro          # YAML-контент (intake + модули + audio)
+    networks: [mental-network]
+    restart: unless-stopped
+    depends_on:
+      db: { condition: service_healthy }
+    logging: { driver: "json-file", options: { max-size: "50m", max-file: "5" } }
+
+  bot:
+    build: { context: ./bot, dockerfile: Dockerfile }
+    container_name: mental-bot
+    ports:
+      - "127.0.0.1:8011:8011"          # nginx проксирует webhook сюда
+    env_file: ./bot/.env.prod
+    environment:
+      - AUDIO_DIR=/content/audio
+    volumes:
+      - ./content:/content:ro          # аудио-практики
+    networks: [mental-network]
+    restart: unless-stopped
+    depends_on:
+      backend: { condition: service_started }
+    logging: { driver: "json-file", options: { max-size: "50m", max-file: "5" } }
+
+volumes:
+  pgdata_mental: { driver: local }
+
+networks:
+  mental-network: { driver: bridge }

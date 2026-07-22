@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+# local DB (для проверки; в проде — Postgres)
+backend/*.db
+# большой бинарный контент и промежуточные фрагменты — не в git
+# (аудио доставляется на сервер отдельно; интеграция аудио — отдельный шаг)
+content/audio/
+content/modules/_fragments/
+# env (секреты — НЕ коммитим; .env.example/.env.prod.example коммитим)
+.env
+.env.prod
+**/.env
+**/.env.prod
+!.env.example
+!**/.env.prod.example

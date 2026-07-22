@@ -1,0 +1,10 @@
+**/__pycache__/
+**/*.pyc
+**/.venv/
+.venv/
+**/*.db
+**/.env
+**/.env.prod
+.git/
+content/_fragments/
+*.log

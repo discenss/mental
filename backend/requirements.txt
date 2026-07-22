@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+sqlalchemy>=2.0
+alembic
+pydantic>=2
+pydantic-settings
+pyyaml
+psycopg[binary]
+openai>=1.0
+anthropic>=0.39
