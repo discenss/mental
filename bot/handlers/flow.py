@@ -419,6 +419,14 @@ async def cb_week_insight(cb: CallbackQuery, state: FSMContext):
     await cb.message.answer(r["text"])
 
 
+@router.callback_query(F.data.startswith("module_insight:"))
+async def cb_module_insight(cb: CallbackQuery, state: FSMContext):
+    eid = int(cb.data.split(":", 1)[1])
+    await cb.answer("Собираю разбор модуля…")
+    r = await api.insight(eid)
+    await cb.message.answer(r["text"])
+
+
 # ── постмодуль: смежные направления (§15) ─────────────────────────────────────
 
 @router.callback_query(F.data == "postmodule")
@@ -546,7 +554,8 @@ async def _fp_advance(target: Message, state: FSMContext, answer: str):
     res = await api.final_product_save(data["eid"], answers)
     await state.set_state(None)
     kb = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="📎 Скачать как файл (.md)", callback_data=f"achfile:{data['eid']}")]])
+        InlineKeyboardButton(text="📎 Скачать как файл (.md)", callback_data=f"achfile:{data['eid']}")],
+        [InlineKeyboardButton(text="🪞 Разбор всего модуля (ИИ)", callback_data=f"module_insight:{data['eid']}")]])
     await target.answer(
         "✅ Готово! Ваш личный итог сохранён в «🏆 Личные достижения» "
         "(раздел «🧭 Мой путь»).\n\n" + res["text"], reply_markup=kb)
