@@ -6,7 +6,7 @@ from aiogram.types import CallbackQuery, Message
 
 import texts
 from api import api
-from keyboards import MENU_TEXTS, settings_kb
+from keyboards import MENU_TEXTS, settings_kb, language_kb, LANGUAGE_LABELS
 from states import SettingsStates
 
 router = Router()
@@ -91,3 +91,17 @@ async def set_tz(msg: Message, state: FSMContext):
     await state.set_state(None)
     await msg.answer(f"Часовой пояс: {tz}.")
     await _show(msg, msg.from_user.id)
+
+
+@router.callback_query(F.data == "set_lang_menu")
+async def cb_set_lang_menu(cb: CallbackQuery, state: FSMContext):
+    await cb.answer()
+    await cb.message.answer("На каком языке показывать программу?", reply_markup=language_kb())
+
+
+@router.callback_query(F.data.startswith("set_lang:"))
+async def cb_set_lang(cb: CallbackQuery, state: FSMContext):
+    code = cb.data.split(":", 1)[1]
+    await api.update_settings(cb.from_user.id, language=code)
+    await cb.answer(f"Готово: {LANGUAGE_LABELS.get(code, code)}")
+    await _show(cb.message, cb.from_user.id)

@@ -12,6 +12,20 @@ MENU_TEXTS = {
 # Иконки-градация для маркеров дня (шкала согласия Да…Нет), нейтральные (не «хорошо/плохо»)
 MARKER_ICONS = {"Да": "●", "Скорее да": "◕", "Скорее нет": "◔", "Нет": "○"}
 
+# Языки контента (§ многоязычность) — коды должны совпадать с i18n.SUPPORTED_LANGUAGES на бэкенде
+LANGUAGE_LABELS = {
+    "ru": "🇷🇺 Русский", "en": "🇬🇧 English", "uk": "🇺🇦 Українська",
+    "es": "🇪🇸 Español", "de": "🇩🇪 Deutsch",
+}
+
+
+def language_kb() -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    for code, label in LANGUAGE_LABELS.items():
+        b.button(text=label, callback_data=f"set_lang:{code}")
+    b.adjust(1)
+    return b.as_markup()
+
 
 def options_kb(options: list[str], prefix: str) -> InlineKeyboardMarkup:
     """Кнопки-варианты, callback = f'{prefix}:{index}'."""
@@ -167,6 +181,7 @@ def settings_kb(s: dict) -> InlineKeyboardMarkup:
     b.button(text=f"🌤 День: {_hhmm(s['afternoon'])}", callback_data="set_time:afternoon")
     b.button(text=f"🌙 Вечер: {_hhmm(s['evening'])}", callback_data="set_time:evening")
     b.button(text=f"🌍 Часовой пояс: {s['timezone']}", callback_data="set_tz")
+    b.button(text=f"{LANGUAGE_LABELS.get(s.get('language', 'ru'), '🌐 Язык')}", callback_data="set_lang_menu")
     b.adjust(1)
     return b.as_markup()
 

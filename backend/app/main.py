@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models as m
 from app.services import (intake as intake_svc, progression, postmodule, identity,
-                          settings as settings_svc, finalproduct, audio as audio_svc)
+                          settings as settings_svc, finalproduct, audio as audio_svc, i18n)
 
 app = FastAPI(title="Mental Club API", version="0.1.0")
 
@@ -20,45 +20,66 @@ def health():
 
 
 @app.get("/api/v1/modules")
-def list_modules(db: Session = Depends(get_db)):
-    """Каталог модулей (паспорта)."""
+def list_modules(lang: str = "ru", db: Session = Depends(get_db)):
+    """Каталог модулей (паспорта). До входа в enrollment язык берём явным query-параметром
+    (как у audio.resolve) — единого пользователя тут ещё может не быть под рукой."""
+    language = lang if lang in i18n.SUPPORTED_LANGUAGES else i18n.DEFAULT_LANGUAGE
     rows = db.execute(select(m.Module)).scalars().all()
-    return [
-        {"code": x.code, "name": x.name, "subtitle": x.subtitle,
-         "content_version": x.content_version, "passport": x.passport}
-        for x in rows
-    ]
+    out = []
+    for x in rows:
+        view = i18n.overlay(db, m.ModuleTranslation, m.ModuleTranslation.module_code, x.code,
+                            language, x, ["name", "subtitle", "passport"])
+        out.append({"code": x.code, "name": view["name"], "subtitle": view["subtitle"],
+                    "content_version": x.content_version, "passport": view["passport"]})
+    return out
 
 
 @app.get("/api/v1/modules/{code}/weeks/{n}")
-def get_week(code: str, n: int, db: Session = Depends(get_db)):
+def get_week(code: str, n: int, lang: str = "ru", db: Session = Depends(get_db)):
     """Неделя модуля с днями и самопроверкой."""
+    language = lang if lang in i18n.SUPPORTED_LANGUAGES else i18n.DEFAULT_LANGUAGE
     week = db.execute(
         select(m.ModuleWeek).where(m.ModuleWeek.module_code == code.upper(), m.ModuleWeek.n == n)
     ).scalar_one_or_none()
     if not week:
         raise HTTPException(404, "week not found")
+    week_view = i18n.overlay(db, m.ModuleWeekTranslation, m.ModuleWeekTranslation.week_id, week.id,
+                             language, week, ["title", "intro_screen", "goal", "result"])
     days = db.execute(select(m.ModuleDay).where(m.ModuleDay.week_id == week.id).order_by(m.ModuleDay.day_n)).scalars().all()
+    day_views = [
+        i18n.overlay(db, m.ModuleDayTranslation, m.ModuleDayTranslation.day_id, d.id, language, d,
+                    ["title", "focus", "task_text", "task_subtasks", "quiz", "reflection"])
+        for d in days
+    ]
     return {
-        "n": week.n, "title": week.title, "intro_screen": week.intro_screen,
-        "goal": week.goal, "result": week.result,
-        "days": [{"d": d.day_n, "title": d.title, "focus": d.focus,
-                  "task": {"text": d.task_text, "subtasks": d.task_subtasks},
-                  "quiz": d.quiz, "reflection": d.reflection} for d in days],
+        "n": week.n, "title": week_view["title"], "intro_screen": week_view["intro_screen"],
+        "goal": week_view["goal"], "result": week_view["result"],
+        "days": [{"d": d.day_n, "title": v["title"], "focus": v["focus"],
+                  "task": {"text": v["task_text"], "subtasks": v["task_subtasks"]},
+                  "quiz": v["quiz"], "reflection": v["reflection"]}
+                 for d, v in zip(days, day_views)],
     }
 
 
 @app.get("/api/v1/intake")
-def get_intake(db: Session = Depends(get_db)):
+def get_intake(lang: str = "ru", db: Session = Depends(get_db)):
     """Вопросы входной самооценки + шкала (слой D, §12)."""
+    language = lang if lang in i18n.SUPPORTED_LANGUAGES else i18n.DEFAULT_LANGUAGE
     cfg = db.get(m.IntakeConfig, 1)
     if not cfg:
         raise HTTPException(404, "intake not loaded")
+    cfg_view = i18n.overlay(db, m.IntakeConfigTranslation, m.IntakeConfigTranslation.config_id,
+                            cfg.id, language, cfg, ["client_intro", "start_button"])
     qs = db.execute(select(m.IntakeQuestion).order_by(m.IntakeQuestion.n)).scalars().all()
+    questions = []
+    for q in qs:
+        qv = i18n.overlay(db, m.IntakeQuestionTranslation, m.IntakeQuestionTranslation.question_n,
+                          q.n, language, q, ["text"])
+        questions.append({"n": q.n, "direction": q.direction_code, "text": qv["text"]})
     return {
-        "version": cfg.version, "client_intro": cfg.client_intro,
-        "answer_scale": cfg.answer_scale, "start_button": cfg.start_button,
-        "questions": [{"n": q.n, "direction": q.direction_code, "text": q.text} for q in qs],
+        "version": cfg.version, "client_intro": cfg_view["client_intro"],
+        "answer_scale": cfg.answer_scale, "start_button": cfg_view["start_button"],
+        "questions": questions,
     }
 
 
@@ -109,8 +130,8 @@ def update_user_settings(payload: dict = Body(...), db: Session = Depends(get_db
     uid = _resolve_user_id(db, payload)
     try:
         return settings_svc.update_settings(
-            db, uid, timezone=payload.get("timezone"), slot=payload.get("slot"),
-            hour=payload.get("hour"), minute=payload.get("minute"))
+            db, uid, timezone=payload.get("timezone"), language=payload.get("language"),
+            slot=payload.get("slot"), hour=payload.get("hour"), minute=payload.get("minute"))
     except Exception as e:                              # noqa: BLE001
         raise HTTPException(422, f"неверные настройки: {e}")
 
@@ -145,14 +166,17 @@ def users_abandon_active(payload: dict = Body(...), db: Session = Depends(get_db
 def user_enrollments(payload: dict = Body(...), db: Session = Depends(get_db)):
     """{provider,provider_user_id | user_id} → список записей пользователя (для «Мой путь»/«Сегодня»)."""
     uid = _resolve_user_id(db, payload)
+    language = i18n.resolve_language(db.get(m.User, uid))
     rows = db.execute(
         select(m.Enrollment).where(m.Enrollment.user_id == uid).order_by(m.Enrollment.id.desc())
     ).scalars().all()
     out = []
     for e in rows:
         mod = db.get(m.Module, e.module_code)
+        name = i18n.overlay(db, m.ModuleTranslation, m.ModuleTranslation.module_code, mod.code,
+                            language, mod, ["name"])["name"] if mod else e.module_code
         out.append({"enrollment_id": e.id, "module": e.module_code,
-                    "name": mod.name if mod else e.module_code, "status": e.status,
+                    "name": name, "status": e.status,
                     "week": e.current_week, "day": e.current_day, "mode": e.mode})
     return {"enrollments": out}
 
@@ -161,7 +185,10 @@ def user_enrollments(payload: dict = Body(...), db: Session = Depends(get_db)):
 def enrollment_status(eid: int, db: Session = Depends(get_db)):
     """Сводка пути: модуль, где я сейчас, зоны пройденных недель."""
     e = _enrollment(db, eid)
+    language = i18n.resolve_language(e.user)
     mod = db.get(m.Module, e.module_code)
+    name = i18n.overlay(db, m.ModuleTranslation, m.ModuleTranslation.module_code, mod.code,
+                        language, mod, ["name"])["name"] if mod else e.module_code
     zones = db.execute(
         select(m.SelfcheckResult).where(m.SelfcheckResult.enrollment_id == eid)
         .order_by(m.SelfcheckResult.week_n)
@@ -169,7 +196,7 @@ def enrollment_status(eid: int, db: Session = Depends(get_db)):
     days_done = db.execute(
         select(func.count(m.DailyEntry.id)).where(m.DailyEntry.enrollment_id == eid)
     ).scalar_one()
-    return {"module": e.module_code, "name": mod.name if mod else e.module_code,
+    return {"module": e.module_code, "name": name,
             "status": e.status, "week": e.current_week, "day": e.current_day, "mode": e.mode,
             "total_weeks": 6, "total_days": 7, "days_completed": days_done,
             "days_total": 42, "started_at": e.started_at.isoformat() if e.started_at else None,
@@ -210,9 +237,12 @@ def journal_add(payload: dict = Body(...), db: Session = Depends(get_db)):
 def enroll(payload: dict = Body(...), db: Session = Depends(get_db)):
     uid = _resolve_user_id(db, payload)
     e = progression.enroll(db, uid, payload["module_code"], mode=payload.get("mode", "normal"))
+    language = i18n.resolve_language(db.get(m.User, uid))
     mod = db.get(m.Module, e.module_code)
+    name = i18n.overlay(db, m.ModuleTranslation, m.ModuleTranslation.module_code, mod.code,
+                        language, mod, ["name"])["name"] if mod else e.module_code
     return {"enrollment_id": e.id, "module": e.module_code,
-            "name": mod.name if mod else e.module_code, "mode": e.mode,
+            "name": name, "mode": e.mode,
             "week": e.current_week, "day": e.current_day, "status": e.status}
 
 
@@ -292,13 +322,26 @@ def complete_day(eid: int, payload: dict = Body(default={}), db: Session = Depen
 def selfcheck_questions(eid: int, db: Session = Depends(get_db)):
     """Вопросы недельной самопроверки текущей недели (тексты вариантов; веса скрыты)."""
     e = _enrollment(db, eid)
+    language = i18n.resolve_language(e.user)
     week = db.execute(select(m.ModuleWeek).where(m.ModuleWeek.module_code == e.module_code,
                                                  m.ModuleWeek.n == e.current_week)).scalar_one()
     qs = db.execute(select(m.SelfcheckQuestion).where(m.SelfcheckQuestion.week_id == week.id)
                     .order_by(m.SelfcheckQuestion.q_index)).scalars().all()
-    return {"week": e.current_week,
-            "questions": [{"q": q.q_index, "question": q.question,
-                           "options": [o["text"] for o in q.options]} for q in qs]}
+    out = []
+    for q in qs:
+        base_texts = [o["text"] for o in q.options]
+        question_text = q.question
+        if language != i18n.DEFAULT_LANGUAGE:
+            tr = db.execute(
+                select(m.SelfcheckQuestionTranslation).where(
+                    m.SelfcheckQuestionTranslation.question_id == q.id,
+                    m.SelfcheckQuestionTranslation.language == language)
+            ).scalar_one_or_none()
+            if tr:
+                question_text = tr.question or question_text
+                base_texts = tr.option_texts or base_texts
+        out.append({"q": q.q_index, "question": question_text, "options": base_texts})
+    return {"week": e.current_week, "questions": out}
 
 
 @app.post("/api/v1/enrollments/{eid}/selfcheck")

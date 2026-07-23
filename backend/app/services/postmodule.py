@@ -8,20 +8,29 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import models as m
+from app.services import i18n
 
 
 def _tag_to_module(db: Session) -> dict[str, str | None]:
     return {d.code: d.module_code for d in db.execute(select(m.IntakeDirection)).scalars().all()}
 
 
-def _module_names(db: Session) -> dict[str, str]:
+def _module_names(db: Session, language: str = i18n.DEFAULT_LANGUAGE) -> dict[str, str]:
     """module_code → пользовательское имя модуля (для рекомендации смежного маршрута)."""
-    return {mod.code: mod.name for mod in db.execute(select(m.Module)).scalars().all()}
+    return {
+        mod.code: i18n.overlay(db, m.ModuleTranslation, m.ModuleTranslation.module_code,
+                              mod.code, language, mod, ["name"])["name"]
+        for mod in db.execute(select(m.Module)).scalars().all()
+    }
 
 
-def _tag_names(db: Session) -> dict[str, str]:
+def _tag_names(db: Session, language: str = i18n.DEFAULT_LANGUAGE) -> dict[str, str]:
     """тег направления → короткое имя темы (для тем без готового модуля)."""
-    return {d.code: d.name_short for d in db.execute(select(m.IntakeDirection)).scalars().all()}
+    return {
+        d.code: i18n.overlay(db, m.IntakeDirectionTranslation, m.IntakeDirectionTranslation.direction_code,
+                             d.code, language, d, ["name_short"])["name_short"]
+        for d in db.execute(select(m.IntakeDirection)).scalars().all()
+    }
 
 
 def get_questions(db: Session, enrollment: m.Enrollment) -> dict:
@@ -35,19 +44,25 @@ def get_questions(db: Session, enrollment: m.Enrollment) -> dict:
         return {"kind": "none", "topics": []}
     if cfg.kind != "test":
         return {"kind": cfg.kind, "topics": []}          # flags — без вопросов
+    language = i18n.resolve_language(enrollment.user)
+    config = i18n.overlay(db, m.PostmoduleConfigTranslation, m.PostmoduleConfigTranslation.module_code,
+                          enrollment.module_code, language, cfg, ["config"])["config"]
     topics = [
         {"tag": t["tag"], "name": t.get("name", t["tag"]),
          "questions": [{"question": q["question"],
                         "options": [o["text"] for o in q["options"]]}   # без weight
                        for q in t["questions"]]}
-        for t in cfg.config["topics"]
+        for t in config["topics"]
     ]
     return {"kind": "test", "topics": topics}
 
 
 def run_test(db: Session, enrollment: m.Enrollment, answers: dict[str, list[int]],
              *, persist: bool = True) -> dict:
-    """REAL-режим. answers: {тег: [индексы вариантов по 3 вопросам темы]}. Балл темы 0..9."""
+    """REAL-режим. answers: {тег: [индексы вариантов по 3 вопросам темы]}. Балл темы 0..9.
+
+    Подсчёт баллов всегда идёт по базовому (ru) cfg.config — перевод применяется только
+    к topic_name/module_name в возвращаемом результате."""
     cfg = db.get(m.PostmoduleConfig, enrollment.module_code)
     if cfg is None or cfg.kind != "test":
         raise ValueError("у модуля нет постмодульного теста")
@@ -71,8 +86,14 @@ def run_test(db: Session, enrollment: m.Enrollment, answers: dict[str, list[int]
                     key=lambda t: (-scores[t], prio.get(t, 99)))
     attention = sorted([t for t, s in scores.items() if 3 <= s <= 5],
                        key=lambda t: (-scores[t], prio.get(t, 99)))
-    names = _module_names(db)
+    language = i18n.resolve_language(enrollment.user)
+    names = _module_names(db, language)
+    # topic_name — с базового (ru) набора тегов, переводом только переопределяем найденные
     topic_name = {t["tag"]: t.get("name", t["tag"]) for t in topics}
+    display_config = i18n.overlay(db, m.PostmoduleConfigTranslation, m.PostmoduleConfigTranslation.module_code,
+                                  enrollment.module_code, language, cfg, ["config"])["config"]
+    topic_name.update({t["tag"]: t.get("name", t["tag"]) for t in display_config.get("topics", [])
+                       if t["tag"] in topic_name})
     recommended = [{"tag": t, "score": scores[t], "module": tag_mod.get(t),
                     "module_name": names.get(tag_mod.get(t)), "topic_name": topic_name.get(t)}
                    for t in strong]
@@ -90,7 +111,11 @@ def run_flags(db: Session, enrollment: m.Enrollment, *, persist: bool = True) ->
     cfg = db.get(m.PostmoduleConfig, enrollment.module_code)
     if cfg is None or cfg.kind != "flags":
         raise ValueError("у модуля нет flags-постмодуля")
-    texts = cfg.config.get("adjacent_focus_texts", {})
+    language = i18n.resolve_language(enrollment.user)
+    display_config = i18n.overlay(db, m.PostmoduleConfigTranslation, m.PostmoduleConfigTranslation.module_code,
+                                  enrollment.module_code, language, cfg, ["config"])["config"]
+    texts = {**cfg.config.get("adjacent_focus_texts", {}),
+            **display_config.get("adjacent_focus_texts", {})}
     accs = db.execute(
         select(m.FlagAccumulator).where(m.FlagAccumulator.enrollment_id == enrollment.id)
     ).scalars().all()
@@ -101,8 +126,8 @@ def run_flags(db: Session, enrollment: m.Enrollment, *, persist: bool = True) ->
     qualified.sort(key=lambda a: (-a.weeks_hit, -a.total_weight))
     top = qualified[:2]                      # максимум 2 фокуса
     tag_mod = _tag_to_module(db)
-    names = _module_names(db)
-    tnames = _tag_names(db)
+    names = _module_names(db, language)
+    tnames = _tag_names(db, language)
 
     focuses = [{"tag": a.tag, "total_weight": a.total_weight, "weeks_hit": a.weeks_hit,
                 "text": texts.get(a.tag, ""), "module": tag_mod.get(a.tag),

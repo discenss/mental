@@ -38,6 +38,19 @@ class Module(Base):
     postmodule: Mapped["PostmoduleConfig"] = relationship(cascade="all, delete-orphan", uselist=False)
 
 
+class ModuleTranslation(Base):
+    """Перевод name/subtitle/passport на не-ru язык (§ мультиязычность). ru всегда берётся
+    из Module напрямую — здесь строк с language='ru' не бывает."""
+    __tablename__ = "module_translations"
+    __table_args__ = (UniqueConstraint("module_code", "language"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    module_code: Mapped[str] = mapped_column(ForeignKey("modules.code", ondelete="CASCADE"))
+    language: Mapped[str] = mapped_column(String(8))
+    name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    subtitle: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    passport: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+
 class ModuleWeek(Base):
     __tablename__ = "module_weeks"
     __table_args__ = (UniqueConstraint("module_code", "n"),)
@@ -59,6 +72,21 @@ class ModuleWeek(Base):
     critical_triggers: Mapped[list["CriticalTrigger"]] = relationship(cascade="all, delete-orphan")
 
 
+class ModuleWeekTranslation(Base):
+    __tablename__ = "module_week_translations"
+    __table_args__ = (UniqueConstraint("week_id", "language"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    week_id: Mapped[int] = mapped_column(ForeignKey("module_weeks.id", ondelete="CASCADE"))
+    language: Mapped[str] = mapped_column(String(8))
+    title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    intro_screen: Mapped[str | None] = mapped_column(Text, nullable=True)
+    meaning: Mapped[str | None] = mapped_column(Text, nullable=True)
+    goal: Mapped[str | None] = mapped_column(Text, nullable=True)
+    result: Mapped[str | None] = mapped_column(Text, nullable=True)
+    key_themes: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    intent_questions: Mapped[list | None] = mapped_column(JSON, nullable=True)
+
+
 class ModuleDay(Base):
     __tablename__ = "module_days"
     __table_args__ = (UniqueConstraint("week_id", "day_n"),)
@@ -73,6 +101,22 @@ class ModuleDay(Base):
     reflection: Mapped[list] = mapped_column(JSON, default=list)             # §8.6 (3 вопроса)
 
 
+class ModuleDayTranslation(Base):
+    """Перевод title/focus/task/quiz-текста/reflection. Числовые/структурные поля квиза
+    (kind, correct, saves_free_text) в переводе не хранятся — они языко-независимы."""
+    __tablename__ = "module_day_translations"
+    __table_args__ = (UniqueConstraint("day_id", "language"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    day_id: Mapped[int] = mapped_column(ForeignKey("module_days.id", ondelete="CASCADE"))
+    language: Mapped[str] = mapped_column(String(8))
+    title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    focus: Mapped[str | None] = mapped_column(Text, nullable=True)
+    task_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    task_subtasks: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    quiz: Mapped[dict | None] = mapped_column(JSON, nullable=True)           # {question, options: [str,...]}
+    reflection: Mapped[list | None] = mapped_column(JSON, nullable=True)
+
+
 class Marker(Base):
     """5 утренних + 5 вечерних, константы модуля. Не в дневник, без весов (§5)."""
     __tablename__ = "markers"
@@ -83,6 +127,16 @@ class Marker(Base):
     idx: Mapped[int] = mapped_column(Integer)                                # 1..5
     question: Mapped[str] = mapped_column(Text)
     options: Mapped[list] = mapped_column(JSON)
+
+
+class MarkerTranslation(Base):
+    __tablename__ = "marker_translations"
+    __table_args__ = (UniqueConstraint("marker_id", "language"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    marker_id: Mapped[int] = mapped_column(ForeignKey("markers.id", ondelete="CASCADE"))
+    language: Mapped[str] = mapped_column(String(8))
+    question: Mapped[str | None] = mapped_column(Text, nullable=True)
+    options: Mapped[list | None] = mapped_column(JSON, nullable=True)        # [str, ...] по тем же индексам
 
 
 class AudioAsset(Base):
@@ -138,6 +192,18 @@ class SelfcheckQuestion(Base):
     options: Mapped[list] = mapped_column(JSON)                              # [{text, weight|flag_weight, critical?}]
 
 
+class SelfcheckQuestionTranslation(Base):
+    """Только текст (question, option_texts по индексам варианта) — weight/flag_weight/critical
+    остаются на базовой ru-строке и никогда не подменяются переводом (корректность подсчёта)."""
+    __tablename__ = "selfcheck_question_translations"
+    __table_args__ = (UniqueConstraint("question_id", "language"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    question_id: Mapped[int] = mapped_column(ForeignKey("selfcheck_questions.id", ondelete="CASCADE"))
+    language: Mapped[str] = mapped_column(String(8))
+    question: Mapped[str | None] = mapped_column(Text, nullable=True)
+    option_texts: Mapped[list | None] = mapped_column(JSON, nullable=True)   # [str, ...]
+
+
 class ZoneInterp(Base):
     __tablename__ = "zone_interps"
     __table_args__ = (UniqueConstraint("week_id", "zone"),)
@@ -152,6 +218,17 @@ class ZoneInterp(Base):
     recommendation: Mapped[str] = mapped_column(Text)
 
 
+class ZoneInterpTranslation(Base):
+    __tablename__ = "zone_interp_translations"
+    __table_args__ = (UniqueConstraint("zone_id", "language"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    zone_id: Mapped[int] = mapped_column(ForeignKey("zone_interps.id", ondelete="CASCADE"))
+    language: Mapped[str] = mapped_column(String(8))
+    meaning: Mapped[str | None] = mapped_column(Text, nullable=True)
+    user_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    recommendation: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
 class CriticalTrigger(Base):
     __tablename__ = "critical_triggers"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -163,6 +240,17 @@ class CriticalTrigger(Base):
     additional_text: Mapped[str] = mapped_column(Text)
 
 
+class CriticalTriggerTranslation(Base):
+    """Только additional_text. Matching-логика (condition/options/refs) языко-независима —
+    fallback-матч по тексту варианта (когда refs не заданы) продолжает сверяться с ru-текстом."""
+    __tablename__ = "critical_trigger_translations"
+    __table_args__ = (UniqueConstraint("trigger_id", "language"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trigger_id: Mapped[int] = mapped_column(ForeignKey("critical_triggers.id", ondelete="CASCADE"))
+    language: Mapped[str] = mapped_column(String(8))
+    additional_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
 class FinalProductTemplate(Base):
     __tablename__ = "final_product_templates"
     module_code: Mapped[str] = mapped_column(ForeignKey("modules.code"), primary_key=True)
@@ -170,11 +258,33 @@ class FinalProductTemplate(Base):
     sections: Mapped[list] = mapped_column(JSON)
 
 
+class FinalProductTemplateTranslation(Base):
+    __tablename__ = "final_product_template_translations"
+    __table_args__ = (UniqueConstraint("module_code", "language"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    module_code: Mapped[str] = mapped_column(ForeignKey("final_product_templates.module_code", ondelete="CASCADE"))
+    language: Mapped[str] = mapped_column(String(8))
+    title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    sections: Mapped[list | None] = mapped_column(JSON, nullable=True)
+
+
 class PostmoduleConfig(Base):
     __tablename__ = "postmodule_config"
     module_code: Mapped[str] = mapped_column(ForeignKey("modules.code"), primary_key=True)
     kind: Mapped[str] = mapped_column(String(16))                            # test|flags|none
     config: Mapped[dict] = mapped_column(JSON)                               # rule/tags/adjacent_focus_texts | topics
+
+
+class PostmoduleConfigTranslation(Base):
+    """config хранит только текстовые поля той же формы, что и базовый config (имена тем,
+    вопросы/варианты как текст, adjacent_focus_texts) — веса вариантов сюда не попадают,
+    run_test/run_flags всегда считают по базовому PostmoduleConfig.config."""
+    __tablename__ = "postmodule_config_translations"
+    __table_args__ = (UniqueConstraint("module_code", "language"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    module_code: Mapped[str] = mapped_column(ForeignKey("postmodule_config.module_code", ondelete="CASCADE"))
+    language: Mapped[str] = mapped_column(String(8))
+    config: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -197,6 +307,19 @@ class IntakeConfig(Base):
     must_include: Mapped[str] = mapped_column(Text)
 
 
+class IntakeConfigTranslation(Base):
+    __tablename__ = "intake_config_translations"
+    __table_args__ = (UniqueConstraint("config_id", "language"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    config_id: Mapped[int] = mapped_column(ForeignKey("intake_config.id", ondelete="CASCADE"), default=1)
+    language: Mapped[str] = mapped_column(String(8))
+    client_intro: Mapped[str | None] = mapped_column(Text, nullable=True)
+    start_button: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    reference_period: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    soft_no_leading: Mapped[str | None] = mapped_column(Text, nullable=True)
+    must_include: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
 class IntakeDirection(Base):
     __tablename__ = "intake_directions"
     code: Mapped[str] = mapped_column(String(16), primary_key=True)          # = тег = код модуля
@@ -208,11 +331,31 @@ class IntakeDirection(Base):
     module_code: Mapped[str | None] = mapped_column(ForeignKey("modules.code"), nullable=True)
 
 
+class IntakeDirectionTranslation(Base):
+    __tablename__ = "intake_direction_translations"
+    __table_args__ = (UniqueConstraint("direction_code", "language"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    direction_code: Mapped[str] = mapped_column(ForeignKey("intake_directions.code", ondelete="CASCADE"))
+    language: Mapped[str] = mapped_column(String(8))
+    name_short: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    name_leading: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    purpose: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
 class IntakeQuestion(Base):
     __tablename__ = "intake_questions"
     n: Mapped[int] = mapped_column(Integer, primary_key=True)                # 1..30
     direction_code: Mapped[str] = mapped_column(ForeignKey("intake_directions.code"))
     text: Mapped[str] = mapped_column(Text)
+
+
+class IntakeQuestionTranslation(Base):
+    __tablename__ = "intake_question_translations"
+    __table_args__ = (UniqueConstraint("question_n", "language"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    question_n: Mapped[int] = mapped_column(ForeignKey("intake_questions.n", ondelete="CASCADE"))
+    language: Mapped[str] = mapped_column(String(8))
+    text: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class IntakeInterp(Base):
@@ -224,10 +367,28 @@ class IntakeInterp(Base):
     client_text: Mapped[str] = mapped_column(Text)
 
 
+class IntakeInterpTranslation(Base):
+    __tablename__ = "intake_interp_translations"
+    __table_args__ = (UniqueConstraint("interp_id", "language"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    interp_id: Mapped[int] = mapped_column(ForeignKey("intake_interps.id", ondelete="CASCADE"))
+    language: Mapped[str] = mapped_column(String(8))
+    client_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
 class IntakeStaticText(Base):
     __tablename__ = "intake_static_texts"
     key: Mapped[str] = mapped_column(String(32), primary_key=True)           # pre_result|result_template|outro
     text: Mapped[str] = mapped_column(Text)
+
+
+class IntakeStaticTextTranslation(Base):
+    __tablename__ = "intake_static_text_translations"
+    __table_args__ = (UniqueConstraint("static_key", "language"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    static_key: Mapped[str] = mapped_column(ForeignKey("intake_static_texts.key", ondelete="CASCADE"))
+    language: Mapped[str] = mapped_column(String(8))
+    text: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -282,6 +443,8 @@ class Enrollment(Base):
     current_day: Mapped[int] = mapped_column(Integer, default=1)
     status: Mapped[str] = mapped_column(String(16), default="active")        # active|selfcheck_due|completed
     mode: Mapped[str] = mapped_column(String(8), default="normal")           # normal|test (перемотка)
+
+    user: Mapped["User"] = relationship()
 
 
 class DailyEntry(Base):

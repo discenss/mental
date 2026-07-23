@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import models as m
+from app.services import i18n
 
 
 def _week(db: Session, module_code: str, week_n: int) -> m.ModuleWeek:
@@ -23,7 +24,12 @@ def _week(db: Session, module_code: str, week_n: int) -> m.ModuleWeek:
 
 def score_week(db: Session, enrollment: m.Enrollment, week_n: int,
                answers: dict[int, int], *, persist: bool = True) -> dict:
-    """answers: {q_index(1..10): индекс_выбранного_варианта}."""
+    """answers: {q_index(1..10): индекс_выбранного_варианта}.
+
+    Подсчёт (core_score/zone/flags/critical-триггеры) всегда идёт по базовым ru-строкам —
+    перевод применяется только к текстам в возвращаемом результате (user_text/recommendation/
+    critical_texts), никогда к весам/индексам/условиям срабатывания."""
+    language = i18n.resolve_language(enrollment.user)
     week = _week(db, enrollment.module_code, week_n)
     questions = db.execute(
         select(m.SelfcheckQuestion).where(m.SelfcheckQuestion.week_id == week.id)
@@ -55,6 +61,8 @@ def score_week(db: Session, enrollment: m.Enrollment, week_n: int,
         select(m.ZoneInterp).where(m.ZoneInterp.week_id == week.id)
     ).scalars().all()
     zone = next((z for z in zones if z.score_min <= core_score <= z.score_max), None)
+    zone_view = i18n.overlay(db, m.ZoneInterpTranslation, m.ZoneInterpTranslation.zone_id, zone.id,
+                             language, zone, ["meaning", "user_text", "recommendation"]) if zone else None
 
     # critical-answer logic — по точным ссылкам refs {q,opt} (min_hits),
     # с fallback на устаревший матч по тексту варианта, если refs не заданы.
@@ -70,7 +78,11 @@ def score_week(db: Session, enrollment: m.Enrollment, week_n: int,
         return bool(set(t.options) & chosen_set)   # fallback
 
     fired = [t for t in triggers if _fired(t)]
-    critical_texts = [t.additional_text for t in fired]
+    critical_texts = [
+        i18n.overlay(db, m.CriticalTriggerTranslation, m.CriticalTriggerTranslation.trigger_id,
+                    t.id, language, t, ["additional_text"])["additional_text"]
+        for t in fired
+    ]
 
     if persist:
         db.add(m.SelfcheckResult(
@@ -96,8 +108,8 @@ def score_week(db: Session, enrollment: m.Enrollment, week_n: int,
     return {
         "core_score": core_score,                       # скрыто от пользователя
         "zone": zone.zone if zone else None,
-        "user_text": zone.user_text if zone else "",
-        "recommendation": zone.recommendation if zone else "",
+        "user_text": zone_view["user_text"] if zone_view else "",
+        "recommendation": zone_view["recommendation"] if zone_view else "",
         "critical_texts": critical_texts,               # доп. мягкие блоки
         "flags": flags,                                 # скрыто
         "blocks_progression": False,                    # §10 — никогда не блокирует

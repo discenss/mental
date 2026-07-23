@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import models as m
-from app.services import scoring
+from app.services import scoring, i18n
 
 
 def _current_entry(db: Session, enrollment: m.Enrollment):
@@ -51,7 +51,9 @@ def enroll(db: Session, user_id: int, module_code: str, *, mode: str = "normal")
     return e
 
 
-def _day(db: Session, module_code: str, week_n: int, day_n: int):
+def _day(db: Session, module_code: str, week_n: int, day_n: int, language: str):
+    """Возвращает (week, day, week_view, day_view) — *_view уже локализованы под `language`
+    (ru — как есть, иначе — оверлей из ModuleWeekTranslation/ModuleDayTranslation)."""
     week = db.execute(
         select(m.ModuleWeek).where(m.ModuleWeek.module_code == module_code,
                                    m.ModuleWeek.n == week_n)
@@ -60,7 +62,14 @@ def _day(db: Session, module_code: str, week_n: int, day_n: int):
         select(m.ModuleDay).where(m.ModuleDay.week_id == week.id,
                                   m.ModuleDay.day_n == day_n)
     ).scalar_one()
-    return week, day
+    week_view = i18n.overlay(db, m.ModuleWeekTranslation, m.ModuleWeekTranslation.week_id, week.id,
+                            language, week,
+                            ["title", "intro_screen", "meaning", "goal", "result",
+                             "key_themes", "intent_questions"])
+    day_view = i18n.overlay(db, m.ModuleDayTranslation, m.ModuleDayTranslation.day_id, day.id,
+                            language, day,
+                            ["title", "focus", "task_text", "task_subtasks", "quiz", "reflection"])
+    return week, day, week_view, day_view
 
 
 def get_today(db: Session, enrollment: m.Enrollment, *, today: _date | None = None) -> dict:
@@ -76,15 +85,19 @@ def get_today(db: Session, enrollment: m.Enrollment, *, today: _date | None = No
     closed_today = _closed_today(db, enrollment.id, today) if today else False
     done_today = closed_today if session == "morning" else False
 
-    week, day = _day(db, enrollment.module_code, enrollment.current_week, enrollment.current_day)
+    language = i18n.resolve_language(enrollment.user)
+    week, day, week_view, day_view = _day(db, enrollment.module_code, enrollment.current_week,
+                                         enrollment.current_day, language)
     markers = db.execute(
         select(m.Marker).where(m.Marker.module_code == enrollment.module_code)
         .order_by(m.Marker.phase, m.Marker.idx)
     ).scalars().all()
-    morning = [{"idx": x.idx, "question": x.question, "options": x.options}
-               for x in markers if x.phase == "morning"]
-    evening = [{"idx": x.idx, "question": x.question, "options": x.options}
-               for x in markers if x.phase == "evening"]
+    def _marker_view(x: m.Marker) -> dict:
+        v = i18n.overlay(db, m.MarkerTranslation, m.MarkerTranslation.marker_id, x.id,
+                         language, x, ["question", "options"])
+        return {"idx": x.idx, "question": v["question"], "options": v["options"]}
+    morning = [_marker_view(x) for x in markers if x.phase == "morning"]
+    evening = [_marker_view(x) for x in markers if x.phase == "evening"]
     audio = db.execute(
         select(m.AudioAsset).where(m.AudioAsset.module_code == enrollment.module_code,
                                    m.AudioAsset.week_n == enrollment.current_week)
@@ -95,16 +108,16 @@ def get_today(db: Session, enrollment: m.Enrollment, *, today: _date | None = No
 
     return {
         "status": "active", "done_today": done_today, "session": session,
-        "week": enrollment.current_week, "day": day.day_n, "day_title": day.title,
-        "week_intro": {"title": week.title, "intro_screen": week.intro_screen,
-                       "meaning": week.meaning, "goal": week.goal, "result": week.result,
-                       "key_themes": week.key_themes},
+        "week": enrollment.current_week, "day": day.day_n, "day_title": day_view["title"],
+        "week_intro": {"title": week_view["title"], "intro_screen": week_view["intro_screen"],
+                       "meaning": week_view["meaning"], "goal": week_view["goal"],
+                       "result": week_view["result"], "key_themes": week_view["key_themes"]},
         "morning_markers": morning, "evening_markers": evening,
-        "focus": day.focus,
-        "task": {"text": day.task_text, "subtasks": day.task_subtasks},
-        "quiz": day.quiz,
-        "reflection": day.reflection,
-        "intent_questions": week.intent_questions,     # W6-спец
+        "focus": day_view["focus"],
+        "task": {"text": day_view["task_text"], "subtasks": day_view["task_subtasks"]},
+        "quiz": day_view["quiz"],
+        "reflection": day_view["reflection"],
+        "intent_questions": week_view["intent_questions"],     # W6-спец
         # языко-независимо: код+заголовок практики. Доставку (файл/URL/кэш конкретного языка)
         # канал получает отдельным вызовом GET /audio/{code}/resolve?lang=… по требованию.
         "audio": {"code": day_audio.code, "title": day_audio.title}

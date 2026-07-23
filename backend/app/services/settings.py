@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import models as m
+from app.services import i18n
 
 DEFAULT_TZ = "Europe/Riga"
 
@@ -35,6 +36,7 @@ def get_settings(db: Session, user_id: int) -> dict:
     u = db.get(m.User, user_id)
     return {
         "timezone": u.timezone or DEFAULT_TZ,
+        "language": i18n.resolve_language(u),
         "morning": {"hour": u.reminder_morning_hour, "minute": u.reminder_morning_minute},
         "afternoon": {"hour": u.reminder_afternoon_hour, "minute": u.reminder_afternoon_minute},
         "evening": {"hour": u.reminder_hour, "minute": u.reminder_minute},
@@ -42,12 +44,16 @@ def get_settings(db: Session, user_id: int) -> dict:
 
 
 def update_settings(db: Session, user_id: int, *, timezone: str | None = None,
-                    slot: str | None = None, hour: int | None = None,
-                    minute: int | None = None) -> dict:
+                    language: str | None = None, slot: str | None = None,
+                    hour: int | None = None, minute: int | None = None) -> dict:
     u = db.get(m.User, user_id)
     if timezone is not None:
         pytz.timezone(timezone)                         # бросит, если неверная
         u.timezone = timezone
+    if language is not None:
+        if language not in i18n.SUPPORTED_LANGUAGES:
+            raise ValueError(f"неизвестный язык: {language}")
+        u.preferred_language = language
     if slot is not None:
         if slot not in SLOTS:
             raise ValueError(f"неизвестный слот: {slot}")
@@ -105,6 +111,11 @@ def due_reminders(db: Session) -> list[dict]:
         if not ident:
             continue
         mod = db.get(m.Module, enr.module_code)
+        mod_name = enr.module_code
+        if mod:
+            language = i18n.resolve_language(u)
+            mod_name = i18n.overlay(db, m.ModuleTranslation, m.ModuleTranslation.module_code,
+                                    mod.code, language, mod, ["name"])["name"]
         for slot, (h_attr, mi_attr, date_attr) in SLOTS.items():
             if getattr(u, date_attr) == today:           # уже доставлено сегодня
                 continue
@@ -114,7 +125,7 @@ def due_reminders(db: Session) -> list[dict]:
             if slot == "morning" and opened:
                 continue                                 # утро неактуально — не шлём (и не помечаем)
             out.append({"provider_user_id": ident.provider_user_id, "slot": slot,
-                        "module_name": mod.name if mod else enr.module_code,
+                        "module_name": mod_name,
                         "week": enr.current_week, "day": enr.current_day})
     return out                                           # без стемпа — пометит mark_reminded
 

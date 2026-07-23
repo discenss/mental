@@ -109,11 +109,14 @@ def _hhmm(slot: dict) -> str:
 
 
 def settings_view(s: dict) -> str:
+    from keyboards import LANGUAGE_LABELS
+    lang_label = LANGUAGE_LABELS.get(s.get("language", "ru"), s.get("language", "ru"))
     return ("⚙️ <b>Настройки напоминаний</b>\n\n"
             f"☀️ Утренний опрос: <b>{_hhmm(s['morning'])}</b>\n"
             f"🌤 Напоминание о задании: <b>{_hhmm(s['afternoon'])}</b>\n"
             f"🌙 Вечерний опрос: <b>{_hhmm(s['evening'])}</b>\n"
-            f"🌍 Часовой пояс: <b>{s['timezone']}</b>\n\n"
+            f"🌍 Часовой пояс: <b>{s['timezone']}</b>\n"
+            f"🗣 Язык программы: <b>{lang_label}</b>\n\n"
             "Напоминания приходят каждый день в это время (если день ещё не пройден). "
             "Отключить их нельзя — можно только менять время. Меняйте кнопками ниже.")
 

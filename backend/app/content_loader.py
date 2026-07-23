@@ -201,6 +201,216 @@ def load_module(db: Session, yaml_path: str | Path, *, validate: bool = True) ->
     return code
 
 
+# ── переводы (§ многоязычность): ru — в базовых таблицах выше, остальные языки —
+# в сайдкар-таблицах *Translation. Базовый контент должен быть уже загружен load_module/
+# load_intake; сюда пишутся только строки перевода, сами ru-строки не трогаются.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def check_translation(data: dict) -> list[str]:
+    """Лёгкая структурная сверка перевода с оригиналом — те же счётчики, что в check_module,
+    но терпимо к отсутствующим секциям (audio_map в переводах не нужен)."""
+    issues: list[str] = []
+    weeks = data.get("weeks", [])
+    if weeks and len(weeks) != 6:
+        issues.append(f"недель {len(weeks)} != 6")
+    markers = data.get("markers", {})
+    for phase in ("morning", "evening"):
+        vals = markers.get(phase, [])
+        if vals and len(vals) != 5:
+            issues.append(f"маркеры {phase} != 5")
+    for w in weeks:
+        n = w.get("n")
+        days = w.get("days", [])
+        if days and len(days) != 7:
+            issues.append(f"W{n}: дней {len(days)} != 7")
+        for d in days:
+            refl = d.get("reflection")
+            if refl and len(refl) != 3:
+                issues.append(f"W{n}D{d.get('d')}: рефлексий != 3")
+        sc = w.get("selfcheck", [])
+        if sc and len(sc) != 10:
+            issues.append(f"W{n}: самопроверка {len(sc)} != 10")
+    return issues
+
+
+def _replace_translation(db: Session, model, language: str, fields: dict, **match) -> None:
+    """Идемпотентно: удалить прежнюю строку перевода (match+language), вставить новую."""
+    db.execute(delete(model).where(
+        *[getattr(model, k) == v for k, v in match.items()], model.language == language))
+    db.add(model(language=language, **match, **fields))
+
+
+def load_module_translation(db: Session, yaml_path: str | Path, language: str | None = None,
+                            *, validate: bool = True) -> str:
+    """Перевод модуля: та же структура, что у основного real.yaml/bound.yaml, но только
+    текстовые поля (числа/веса игнорируются). Базовый ru-модуль должен быть уже загружен."""
+    data = yaml.safe_load(Path(yaml_path).read_text())
+    mod = data["module"]
+    code = mod["code"]
+    language = language or data.get("language")
+    if not language:
+        raise ValueError(f"не указан язык перевода для {yaml_path}")
+    if language == "ru":
+        raise ValueError("для ru перевод не нужен — редактируйте основной YAML модуля")
+
+    if validate:
+        issues = check_translation(data)
+        if issues:
+            raise ValueError(f"Перевод {code}:{language} не прошёл валидацию:\n  - " + "\n  - ".join(issues))
+
+    module = db.get(m.Module, code)
+    if module is None:
+        raise ValueError(f"модуль {code} ещё не загружен — сначала load_module (ru-файл)")
+
+    _replace_translation(db, m.ModuleTranslation, language,
+                        {"name": mod.get("name"), "subtitle": mod.get("subtitle"),
+                         "passport": data.get("passport")},
+                        module_code=code)
+
+    markers = data.get("markers", {})
+    for phase in ("morning", "evening"):
+        for mk in markers.get(phase, []):
+            marker = db.execute(
+                select(m.Marker).where(m.Marker.module_code == code, m.Marker.phase == phase,
+                                       m.Marker.idx == mk["idx"])
+            ).scalar_one_or_none()
+            if marker is None:
+                continue
+            _replace_translation(db, m.MarkerTranslation, language,
+                                {"question": mk.get("question"), "options": mk.get("options")},
+                                marker_id=marker.id)
+
+    for w in data.get("weeks", []):
+        week = db.execute(
+            select(m.ModuleWeek).where(m.ModuleWeek.module_code == code, m.ModuleWeek.n == w["n"])
+        ).scalar_one_or_none()
+        if week is None:
+            continue
+        _replace_translation(db, m.ModuleWeekTranslation, language, {
+            "title": w.get("title"), "intro_screen": w.get("intro_screen"),
+            "meaning": w.get("meaning"), "goal": w.get("goal"), "result": w.get("result"),
+            "key_themes": w.get("key_themes"), "intent_questions": w.get("intent_questions"),
+        }, week_id=week.id)
+
+        for d in w.get("days", []):
+            day = db.execute(
+                select(m.ModuleDay).where(m.ModuleDay.week_id == week.id, m.ModuleDay.day_n == d["d"])
+            ).scalar_one_or_none()
+            if day is None:
+                continue
+            task = d.get("task") or {}
+            quiz = d.get("quiz") or {}
+            _replace_translation(db, m.ModuleDayTranslation, language, {
+                "title": d.get("title"), "focus": d.get("focus"),
+                "task_text": task.get("text"), "task_subtasks": task.get("subtasks"),
+                "quiz": {"question": quiz.get("question"), "options": quiz.get("options")} if quiz else None,
+                "reflection": d.get("reflection"),
+            }, day_id=day.id)
+
+        for q in w.get("selfcheck", []):
+            sq = db.execute(
+                select(m.SelfcheckQuestion).where(m.SelfcheckQuestion.week_id == week.id,
+                                                  m.SelfcheckQuestion.q_index == q["q"])
+            ).scalar_one_or_none()
+            if sq is None:
+                continue
+            option_texts = [o.get("text") for o in q["options"]] if q.get("options") else None
+            _replace_translation(db, m.SelfcheckQuestionTranslation, language,
+                                {"question": q.get("question"), "option_texts": option_texts},
+                                question_id=sq.id)
+
+        for z in w.get("zones", []):
+            zi = db.execute(
+                select(m.ZoneInterp).where(m.ZoneInterp.week_id == week.id, m.ZoneInterp.zone == z["zone"])
+            ).scalar_one_or_none()
+            if zi is None:
+                continue
+            _replace_translation(db, m.ZoneInterpTranslation, language, {
+                "meaning": z.get("meaning"), "user_text": z.get("user_text"),
+                "recommendation": z.get("recommendation"),
+            }, zone_id=zi.id)
+
+        # critical_triggers не имеют естественного ключа — сопоставляем по позиции в списке,
+        # том же порядке, в котором load_module их вставлял для этой недели.
+        triggers = db.execute(
+            select(m.CriticalTrigger).where(m.CriticalTrigger.week_id == week.id)
+            .order_by(m.CriticalTrigger.id)
+        ).scalars().all()
+        for t, ct in zip(w.get("critical_triggers", []), triggers):
+            _replace_translation(db, m.CriticalTriggerTranslation, language,
+                                {"additional_text": t.get("additional_text")}, trigger_id=ct.id)
+
+    fp = data.get("final_product")
+    if fp:
+        _replace_translation(db, m.FinalProductTemplateTranslation, language,
+                            {"title": fp.get("title"), "sections": fp.get("sections")},
+                            module_code=code)
+
+    pm = data.get("postmodule")
+    if pm:
+        cfg_text = {k: v for k, v in pm.items() if k != "kind"}
+        _replace_translation(db, m.PostmoduleConfigTranslation, language,
+                            {"config": cfg_text}, module_code=code)
+
+    db.commit()
+    return f"{code}:{language}"
+
+
+def load_intake_translation(db: Session, yaml_path: str | Path, language: str | None = None) -> str:
+    """Перевод интейка: та же структура, что у content/intake.yaml, только текст."""
+    data = yaml.safe_load(Path(yaml_path).read_text())
+    intake = data["intake"]
+    language = language or data.get("language")
+    if not language:
+        raise ValueError(f"не указан язык перевода для {yaml_path}")
+    if language == "ru":
+        raise ValueError("для ru перевод не нужен — редактируйте content/intake.yaml")
+
+    if db.get(m.IntakeConfig, 1) is None:
+        raise ValueError("интейк ещё не загружен — сначала load_intake (ru-файл)")
+
+    _replace_translation(db, m.IntakeConfigTranslation, language, {
+        "client_intro": intake.get("client_intro"), "start_button": intake.get("start_button"),
+        "reference_period": intake.get("reference_period"),
+        "soft_no_leading": intake.get("soft_no_leading"), "must_include": intake.get("must_include"),
+    }, config_id=1)
+
+    for d in data.get("directions", []):
+        if db.get(m.IntakeDirection, d["code"]) is None:
+            continue
+        _replace_translation(db, m.IntakeDirectionTranslation, language, {
+            "name_short": d.get("name_short"), "name_leading": d.get("name_leading"),
+            "purpose": d.get("purpose"),
+        }, direction_code=d["code"])
+
+    for q in data.get("questions", []):
+        if db.get(m.IntakeQuestion, q["n"]) is None:
+            continue
+        _replace_translation(db, m.IntakeQuestionTranslation, language,
+                            {"text": q.get("text")}, question_n=q["n"])
+
+    interps = data.get("interpretations", {})
+    for slot in ("leading", "focus1", "focus2"):
+        for dcode, text in (interps.get(slot) or {}).items():
+            interp = db.execute(
+                select(m.IntakeInterp).where(m.IntakeInterp.direction_code == dcode,
+                                             m.IntakeInterp.slot == slot)
+            ).scalar_one_or_none()
+            if interp is None:
+                continue
+            _replace_translation(db, m.IntakeInterpTranslation, language,
+                                {"client_text": text}, interp_id=interp.id)
+
+    for key, text in (interps.get("static") or {}).items():
+        if db.get(m.IntakeStaticText, key) is None:
+            continue
+        _replace_translation(db, m.IntakeStaticTextTranslation, language,
+                            {"text": text}, static_key=key)
+
+    db.commit()
+    return language
+
+
 # ── загрузка интейка (§12) ────────────────────────────────────────────────────
 
 def load_intake(db: Session, yaml_path: str | Path) -> int:
