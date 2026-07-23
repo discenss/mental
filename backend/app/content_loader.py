@@ -8,7 +8,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import yaml
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app import models as m
@@ -86,12 +86,17 @@ def load_module(db: Session, yaml_path: str | Path, *, validate: bool = True) ->
         if issues:
             raise ValueError(f"Модуль {code} не прошёл валидацию:\n  - " + "\n  - ".join(issues))
 
-    # снести прежние данные модуля через ORM-delete — он каскадит по relationship
-    # на weeks→days/selfcheck/zones/criticals, markers, audio, final_product, postmodule.
-    # (Core delete(Module) ORM-каскады НЕ запускает → дубли в дочерних таблицах.)
+    # Идемпотентная перезагрузка: НЕ удаляем сам Module — на него ссылаются enrollments
+    # (реальный прогресс пользователей) и intake_directions, и Postgres строго проверяет
+    # эти FK при удалении (в отличие от SQLite, где такое молча проходит, пока не подставишь
+    # реальные данные — здесь именно так и вскрылось: сначала на intake_directions, потом,
+    # когда на сервере появились настоящие enrollments, на них тоже).
+    # Вместо этого: сносим ТОЛЬКО дочерний контент (недели/дни/маркеры/аудио/…) через ORM-delete
+    # (каскадит на day/selfcheck/zones/criticals и audio→variants), а сам Module обновляем
+    # на месте — так enrollments/intake_directions/дневник ни на миг не остаются без родителя.
     existing = db.get(m.Module, code)
-    # снимок кэша доставки (tg_file_id и т.п.) по (код_аудио, язык) — идемпотентная перезагрузка
-    # контента не должна каждый раз стирать уже накопленный кэш отправки в Telegram/WhatsApp.
+    # снимок кэша доставки аудио (tg_file_id и т.п.) по (код, язык) — перезагрузка контента
+    # не должна каждый раз стирать уже накопленный кэш отправки в Telegram/WhatsApp.
     # Восстанавливаем только если storage_key не поменялся (иначе кэш будет указывать на
     # УЖЕ ДРУГОЙ файл — так неправильно).
     cache_snapshot: dict[tuple[str, str], tuple[str, dict]] = {}
@@ -99,20 +104,29 @@ def load_module(db: Session, yaml_path: str | Path, *, validate: bool = True) ->
         for asset in existing.audio:
             for v in asset.variants:
                 cache_snapshot[(asset.code, v.language)] = (v.storage_key, v.channel_cache)
-        # снять ссылки intake_directions.module_code на этот код перед удалением —
-        # иначе FK-ограничение блокирует DELETE (Postgres проверяет строго, в отличие
-        # от SQLite; на re-load после первого успешного запуска ссылка уже существует).
-        # load_intake() всё равно позже пересоздаст все intake_directions с нуля.
-        db.execute(update(m.IntakeDirection).where(m.IntakeDirection.module_code == code)
-                  .values(module_code=None))
-        db.delete(existing)
+        for week in list(existing.weeks):
+            db.delete(week)
+        for mk in list(existing.markers):
+            db.delete(mk)
+        for a in list(existing.audio):
+            db.delete(a)
+        if existing.final_product:
+            db.delete(existing.final_product)
+        if existing.postmodule:
+            db.delete(existing.postmodule)
         db.flush()
-
-    db.add(m.Module(
-        code=code, name=mod["name"], subtitle=mod.get("subtitle"),
-        content_version=mod["content_version"], final_product_kind=mod["final_product_kind"],
-        postmodule_kind=mod["postmodule_kind"], passport=data.get("passport", {}),
-    ))
+        existing.name = mod["name"]
+        existing.subtitle = mod.get("subtitle")
+        existing.content_version = mod["content_version"]
+        existing.final_product_kind = mod["final_product_kind"]
+        existing.postmodule_kind = mod["postmodule_kind"]
+        existing.passport = data.get("passport", {})
+    else:
+        db.add(m.Module(
+            code=code, name=mod["name"], subtitle=mod.get("subtitle"),
+            content_version=mod["content_version"], final_product_kind=mod["final_product_kind"],
+            postmodule_kind=mod["postmodule_kind"], passport=data.get("passport", {}),
+        ))
 
     markers = data.get("markers", {})
     for phase in ("morning", "evening"):
