@@ -52,6 +52,28 @@ def check_module(data: dict) -> list[str]:
     return issues
 
 
+def _audio_variant_specs(a: dict):
+    """Из записи audio_map достаёт (язык, {file, mime, duration_sec, size_bytes}) на каждый язык.
+
+    Основной язык — `file`/`mime`/`duration_sec`/`size_bytes` на верхнем уровне записи,
+    язык по умолчанию 'ru' (можно переопределить необязательным `language:`). Дополнительные
+    языки — необязательный `files: {en: "AUDIO_..._en.mp3", uk: {file: "...", mime: "..."}}`
+    (значение — либо просто имя файла, либо словарь с теми же полями, что у основного).
+    Так контент можно вести на одном языке и добавлять переводы по мере готовности записей,
+    не трогая уже загруженные (см. сохранение channel_cache в load_module).
+    """
+    primary_lang = a.get("language", "ru")
+    if a.get("file"):
+        yield primary_lang, {"file": a["file"], "mime": a.get("mime"),
+                             "duration_sec": a.get("duration_sec"), "size_bytes": a.get("size_bytes")}
+    for lang, spec in (a.get("files") or {}).items():
+        if isinstance(spec, str):
+            yield lang, {"file": spec}
+        else:
+            yield lang, {"file": spec.get("file"), "mime": spec.get("mime"),
+                         "duration_sec": spec.get("duration_sec"), "size_bytes": spec.get("size_bytes")}
+
+
 # ── загрузка модуля ──────────────────────────────────────────────────────────
 
 def load_module(db: Session, yaml_path: str | Path, *, validate: bool = True) -> str:
@@ -68,7 +90,15 @@ def load_module(db: Session, yaml_path: str | Path, *, validate: bool = True) ->
     # на weeks→days/selfcheck/zones/criticals, markers, audio, final_product, postmodule.
     # (Core delete(Module) ORM-каскады НЕ запускает → дубли в дочерних таблицах.)
     existing = db.get(m.Module, code)
+    # снимок кэша доставки (tg_file_id и т.п.) по (код_аудио, язык) — идемпотентная перезагрузка
+    # контента не должна каждый раз стирать уже накопленный кэш отправки в Telegram/WhatsApp.
+    # Восстанавливаем только если storage_key не поменялся (иначе кэш будет указывать на
+    # УЖЕ ДРУГОЙ файл — так неправильно).
+    cache_snapshot: dict[tuple[str, str], tuple[str, dict]] = {}
     if existing:
+        for asset in existing.audio:
+            for v in asset.variants:
+                cache_snapshot[(asset.code, v.language)] = (v.storage_key, v.channel_cache)
         # снять ссылки intake_directions.module_code на этот код перед удалением —
         # иначе FK-ограничение блокирует DELETE (Postgres проверяет строго, в отличие
         # от SQLite; на re-load после первого успешного запуска ссылка уже существует).
@@ -91,13 +121,23 @@ def load_module(db: Session, yaml_path: str | Path, *, validate: bool = True) ->
                             question=mk["question"], options=mk["options"]))
 
     for a in data.get("audio_map", []):
-        db.add(m.AudioAsset(
+        asset = m.AudioAsset(
             module_code=code, week_n=a["week"], slot=a["slot"], code=a["code"],
             day_range=str(a.get("days") or a.get("day_range") or ""),
             title=a.get("title"), theme=a.get("theme"),
-            media_filename=a.get("file"), mime=a.get("mime"),
-            duration_sec=a.get("duration_sec"), size_bytes=a.get("size_bytes"),
-        ))
+        )
+        db.add(asset)
+        for lang, spec in _audio_variant_specs(a):
+            storage_key = spec.get("file")
+            if not storage_key:
+                continue
+            cached_key, cached_channels = cache_snapshot.get((a["code"], lang), (None, {}))
+            channel_cache = cached_channels if cached_key == storage_key else {}
+            asset.variants.append(m.AudioVariant(
+                language=lang, storage_key=storage_key, mime=spec.get("mime"),
+                duration_sec=spec.get("duration_sec"), size_bytes=spec.get("size_bytes"),
+                channel_cache=channel_cache,
+            ))
 
     for w in data.get("weeks", []):
         week = m.ModuleWeek(

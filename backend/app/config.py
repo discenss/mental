@@ -15,6 +15,14 @@ class Settings(BaseSettings):
     database_url: str = f"sqlite:///{PROJECT_ROOT / 'backend' / 'mental.db'}"
     content_dir: str = str(CONTENT_DIR)
 
+    # ── аудио: публичный базовый URL для отдачи файлов (см. app.services.audio) ─
+    # Пусто (по умолчанию) — публичного URL ещё нет (нет домена): каналы читают файл локально
+    # с диска (общий volume). Как только есть домен — сюда, например,
+    # "https://mental.rhythmos.online/api/v1/audio" (свой backend раздаёт сам, см. main.py) —
+    # ничего в модели/загрузке контента менять не нужно. Позже для переезда на S3/R2/CDN —
+    # меняется на URL бакета, тоже без изменений в коде/схеме (см. docs/DEPLOY.md об аудио).
+    audio_public_base_url: str = ""
+
     # ── ИИ (та же схема, что в rhythmos): два тира моделей + провайдер ──────────
     llm_provider: str = "openai"                       # openai | anthropic
     openai_api_key: str = ""

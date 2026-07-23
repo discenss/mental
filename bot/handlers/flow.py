@@ -42,11 +42,11 @@ def _build_morning_steps(today: dict) -> list[dict]:
     combined = (f"📌 <b>Фокус дня</b>\n{today['focus']}\n\n📝 <b>Задание дня</b>\n{_task_text(today)}"
                 "\n\n<i>Занимайтесь днём, а вечером вернитесь закрыть день.</i>")
     steps.append({"kind": "info", "text": combined})
-    # §8.4 — аудио отдельным сообщением: кнопка «Слушать» НЕ убирается при «Далее»
+    # §8.4 — аудио отдельным сообщением: кнопка «Слушать» НЕ убирается при «Далее».
+    # Доставка (файл/URL/кэш конкретного языка) резолвится по требованию через api.resolve_audio.
     if today.get("audio"):
         a = today["audio"]
-        steps.append({"kind": "audio", "code": a["code"], "title": a.get("title"),
-                      "media_filename": a.get("media_filename"), "tg_file_id": a.get("tg_file_id")})
+        steps.append({"kind": "audio", "code": a["code"], "title": a.get("title")})
     return steps
 
 
@@ -278,7 +278,15 @@ async def cb_task(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(DayStates.running, F.data == "daudio")
 async def cb_audio(cb: CallbackQuery, state: FSMContext):
-    """Прислать аудио-практику дня. Кнопки на сообщении НЕ трогаем — можно переслушать."""
+    """Прислать аудио-практику дня. Кнопки на сообщении НЕ трогаем — можно переслушать.
+
+    Доставка через backend `resolve_audio` (§ аудио: многоязычность, каналы, storage-agnostic):
+    язык пока всегда 'ru' (переключатель языка — отдельная будущая фича, интейк/данные уже
+    поддерживают User.preferred_language, бот пока его не спрашивает). Резолвер сам фолбэкнет
+    на ru, если запрошенного языка ещё нет. Если публичный URL уже настроен (домен/S3) —
+    отдаём Telegram сразу ссылку (он сам скачает); иначе — локальный файл с общего volume.
+    Кэш file_id пишем в backend (переживает рестарт бота/контейнера), не в FSM.
+    """
     data = await state.get_data()
     step = data["day_steps"][data["day_i"]]
     if step.get("kind") != "audio":
@@ -286,21 +294,26 @@ async def cb_audio(cb: CallbackQuery, state: FSMContext):
         return
     await cb.answer("Отправляю аудио…")
     title = step.get("title") or "Аудио-практика"
-    if step.get("tg_file_id"):
-        await cb.message.answer_audio(step["tg_file_id"], title=title)
-        return
-    fname = step.get("media_filename")
-    path = (AUDIO_DIR / fname) if fname else None
-    if not path or not path.is_file():
+    try:
+        info = await api.resolve_audio(step["code"], "ru")
+    except Exception:
         await cb.message.answer("🎧 Аудио пока недоступно для этого дня.")
         return
-    sent = await cb.message.answer_audio(FSInputFile(path), title=title)
-    # закэшировать file_id, чтобы дальше слать мгновенно (и не гонять файл с диска)
+    tg_id = (info.get("cached") or {}).get("telegram")
+    if tg_id:
+        await cb.message.answer_audio(tg_id, title=title)
+        return
+    if info.get("url"):
+        sent = await cb.message.answer_audio(info["url"], title=title)
+    else:
+        path = AUDIO_DIR / info["storage_key"] if info.get("storage_key") else None
+        if not path or not path.is_file():
+            await cb.message.answer("🎧 Аудио пока недоступно для этого дня.")
+            return
+        sent = await cb.message.answer_audio(FSInputFile(path), title=title)
     if sent.audio and sent.audio.file_id:
         try:
-            await api.set_audio_file_id(step["code"], sent.audio.file_id)
-            step["tg_file_id"] = sent.audio.file_id
-            await state.update_data(day_steps=data["day_steps"])
+            await api.cache_audio(step["code"], info["language"], "telegram", sent.audio.file_id)
         except Exception:
             pass  # кэш — не критично; при сбое просто отправим файл снова в следующий раз
 

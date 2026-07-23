@@ -86,6 +86,8 @@ class Marker(Base):
 
 
 class AudioAsset(Base):
+    """Практика-«слот» программы (неделя+слот) — языко-независимая часть учебного плана.
+    Сами файлы/язык/доставка — в дочерних AudioVariant (§ аудио: многоязычность, каналы)."""
     __tablename__ = "audio_assets"
     __table_args__ = (UniqueConstraint("code"),)
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -96,12 +98,32 @@ class AudioAsset(Base):
     day_range: Mapped[str] = mapped_column(String(16))
     title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     theme: Mapped[str | None] = mapped_column(Text, nullable=True)
-    # медиа: файл лежит в content/audio/, в БД — только имя + метаданные
-    media_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)   # AUDIO_BOUND_W1_A2.mp3
-    mime: Mapped[str | None] = mapped_column(String(64), nullable=True)              # audio/mpeg
+
+    variants: Mapped[list["AudioVariant"]] = relationship(cascade="all, delete-orphan",
+                                                          back_populates="audio_asset")
+
+
+class AudioVariant(Base):
+    """Одна языковая запись практики: где лежит файл + кэш ID доставки по каналам.
+
+    storage_key — относительный путь/ключ, НЕ привязан к конкретному хранилищу (диск сейчас,
+    S3-совместимое хранилище потом — меняется только то, как storage_key превращается в URL,
+    см. app.services.audio). channel_cache — {"telegram": "<file_id>", "whatsapp": "<media_id>"}:
+    у каждого канала свой механизм кэширования после первой отправки (Telegram file_id и WhatsApp
+    media_id — разные вещи, ни одна не переносится на другой канал).
+    """
+    __tablename__ = "audio_variants"
+    __table_args__ = (UniqueConstraint("audio_asset_id", "language"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    audio_asset_id: Mapped[int] = mapped_column(ForeignKey("audio_assets.id"))
+    language: Mapped[str] = mapped_column(String(8))                        # ru|en|uk…
+    storage_key: Mapped[str] = mapped_column(String(255))                   # напр. AUDIO_BOUND_W1_A2_ru.mp3
+    mime: Mapped[str | None] = mapped_column(String(64), nullable=True)
     duration_sec: Mapped[int | None] = mapped_column(Integer, nullable=True)
     size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    tg_file_id: Mapped[str | None] = mapped_column(String(255), nullable=True)       # кэш Telegram после 1-й отправки
+    channel_cache: Mapped[dict] = mapped_column(JSON, default=dict)
+
+    audio_asset: Mapped["AudioAsset"] = relationship(back_populates="variants")
 
 
 class SelfcheckQuestion(Base):

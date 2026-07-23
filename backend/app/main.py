@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models as m
 from app.services import (intake as intake_svc, progression, postmodule, identity,
-                          settings as settings_svc, finalproduct)
+                          settings as settings_svc, finalproduct, audio as audio_svc)
 
 app = FastAPI(title="Mental Club API", version="0.1.0")
 
@@ -222,30 +222,42 @@ def today(eid: int, db: Session = Depends(get_db)):
     return progression.get_today(db, _enrollment(db, eid), today=date.today())
 
 
+@app.get("/api/v1/audio/{code}/resolve")
+def audio_resolve(code: str, lang: str = "ru", db: Session = Depends(get_db)):
+    """Разрешить аудио-практику в конкретный языковой вариант (с фолбэком) + отдать URL
+    (если публичный домен уже настроен, settings.audio_public_base_url) и кэш доставки по
+    каналам. Канал (бот и т.п.) сам решает, как доставить: по URL, по кэшу или локальным файлом."""
+    r = audio_svc.resolve(db, code, lang)
+    if not r:
+        raise HTTPException(404, "audio not found")
+    return r
+
+
+@app.post("/api/v1/audio/{code}/cache")
+def audio_cache(code: str, payload: dict = Body(...), db: Session = Depends(get_db)):
+    """Запомнить ID доставки (Telegram file_id / WhatsApp media_id / …) для конкретного
+    языка+канала — дальше этот канал шлёт мгновенно, без повторной загрузки файла."""
+    ok = audio_svc.cache_delivery(db, code, payload["language"], payload["channel"], payload["ref"])
+    if not ok:
+        raise HTTPException(404, "audio/language not found")
+    return {"ok": True}
+
+
 @app.get("/api/v1/audio/{code}/file")
-def audio_file(code: str, db: Session = Depends(get_db)):
-    """Отдать сам аудиофайл (для HTTP-клиентов: macOS-приложение, проверка)."""
+def audio_file(code: str, lang: str = "ru", db: Session = Depends(get_db)):
+    """Отдать сам аудиофайл локально (пока нет публичного объектного хранилища).
+    Once там будет S3/R2 — этот путь станет ненужен: resolve() начнёт отдавать URL бакета
+    напрямую, каналы перестанут ходить сюда."""
     from pathlib import Path
     from fastapi.responses import FileResponse
     from app.config import settings
-    asset = db.execute(select(m.AudioAsset).where(m.AudioAsset.code == code)).scalar_one_or_none()
-    if not asset or not asset.media_filename:
+    r = audio_svc.resolve(db, code, lang)
+    if not r:
         raise HTTPException(404, "audio not found")
-    path = Path(settings.content_dir) / "audio" / asset.media_filename
+    path = Path(settings.content_dir) / "audio" / r["storage_key"]
     if not path.is_file():
         raise HTTPException(404, "audio file missing on disk")
-    return FileResponse(path, media_type=asset.mime or "audio/mpeg", filename=asset.media_filename)
-
-
-@app.post("/api/v1/audio/{code}/tg-file-id")
-def audio_set_tg_file_id(code: str, payload: dict = Body(...), db: Session = Depends(get_db)):
-    """Кэш Telegram file_id после первой отправки ботом — дальше шлём мгновенно."""
-    asset = db.execute(select(m.AudioAsset).where(m.AudioAsset.code == code)).scalar_one_or_none()
-    if not asset:
-        raise HTTPException(404, "audio not found")
-    asset.tg_file_id = payload.get("tg_file_id")
-    db.commit()
-    return {"ok": True, "code": code}
+    return FileResponse(path, media_type=r["mime"] or "audio/mpeg", filename=r["storage_key"])
 
 
 @app.post("/api/v1/enrollments/{eid}/open-day")

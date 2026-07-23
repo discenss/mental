@@ -105,11 +105,10 @@ def get_today(db: Session, enrollment: m.Enrollment, *, today: _date | None = No
         "quiz": day.quiz,
         "reflection": day.reflection,
         "intent_questions": week.intent_questions,     # W6-спец
-        "audio": {
-            "code": day_audio.code, "title": day_audio.title,
-            "media_filename": day_audio.media_filename, "mime": day_audio.mime,
-            "duration_sec": day_audio.duration_sec, "tg_file_id": day_audio.tg_file_id,
-        } if day_audio and day_audio.media_filename else None,
+        # языко-независимо: код+заголовок практики. Доставку (файл/URL/кэш конкретного языка)
+        # канал получает отдельным вызовом GET /audio/{code}/resolve?lang=… по требованию.
+        "audio": {"code": day_audio.code, "title": day_audio.title}
+                 if day_audio and day_audio.variants else None,
     }
 
 

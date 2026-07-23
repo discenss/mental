@@ -96,8 +96,12 @@ class API:
     async def today(self, eid: int) -> dict:
         return await self._get(f"/api/v1/enrollments/{eid}/today")
 
-    async def set_audio_file_id(self, code: str, file_id: str) -> dict:
-        return await self._post(f"/api/v1/audio/{code}/tg-file-id", {"tg_file_id": file_id})
+    async def resolve_audio(self, code: str, lang: str = "ru") -> dict:
+        return await self._get(f"/api/v1/audio/{code}/resolve?lang={lang}")
+
+    async def cache_audio(self, code: str, language: str, channel: str, ref: str) -> dict:
+        return await self._post(f"/api/v1/audio/{code}/cache",
+                               {"language": language, "channel": channel, "ref": ref})
 
     async def open_day(self, eid: int, **payload) -> dict:
         return await self._post(f"/api/v1/enrollments/{eid}/open-day", payload)
