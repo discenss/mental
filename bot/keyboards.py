@@ -37,12 +37,13 @@ def options_kb(options: list[str], prefix: str) -> InlineKeyboardMarkup:
 
 
 def marker_kb(options: list[str], prefix: str) -> InlineKeyboardMarkup:
-    """Маркеры дня: иконка-градация + подпись, компактно (по 2 в ряд)."""
+    """Маркеры дня: иконка-градация + подпись. По 1 в ряд — варианты не всегда короткая
+    шкала Да/Нет, у части модулей это целые фразы, которые обрезаются при 2 в ряд."""
     b = InlineKeyboardBuilder()
     for i, text in enumerate(options):
         icon = MARKER_ICONS.get(text, "·")
         b.button(text=f"{icon} {text}", callback_data=f"{prefix}:{i}")
-    b.adjust(2)
+    b.adjust(1)
     return b.as_markup()
 
 
