@@ -62,10 +62,10 @@ def on_active_route(e: dict) -> str:
 
 
 def week_intro(wi: dict) -> str:
-    # §7.1 — четыре блока недели: вводный экран → смысл → цель → результат (+ ключевые темы)
+    # §7.1 — вводный экран → цель → результат (+ ключевые темы). `meaning` сюда не идёт —
+    # это методологическое поле для автора контента (docs/mental-architecture.md:115),
+    # не пользовательский текст.
     parts = [f"🗓 <b>Новая неделя: {wi['title']}</b>", "", wi.get("intro_screen", "").strip()]
-    if wi.get("meaning"):
-        parts += ["", f"🧩 <b>О чём эта неделя:</b> {wi['meaning'].strip()}"]
     if wi.get("goal"):
         parts += ["", f"🎯 <b>Цель недели:</b> {wi['goal'].strip()}"]
     if wi.get("result"):
