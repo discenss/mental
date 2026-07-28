@@ -14,7 +14,7 @@ from config import AUDIO_DIR
 import texts
 from api import api
 from keyboards import (MARKER_ICONS, MENU_TEXTS, marker_kb, next_kb, options_kb,
-                       skip_kb, skip_wait_kb, task_status_kb)
+                       skip_kb, task_status_kb)
 from states import DayStates, FinalProductStates, PostmoduleStates, SelfcheckStates
 from voice import message_text
 from handlers.progress import resolve_eid
@@ -103,8 +103,7 @@ async def show_today(target: Message, state: FSMContext, eid: int, *, force: boo
     session = today.get("session", "morning")
     if session == "morning":
         if today.get("done_today") and not force:         # день уже закрывали сегодня
-            await target.answer(texts.COME_BACK_TOMORROW,
-                                reply_markup=skip_wait_kb())
+            await target.answer(texts.COME_BACK_TOMORROW)
             return
         # начало недели — показываем клиентский вводный экран недели (один раз, в день 1)
         if today.get("day") == 1 and today.get("week_intro"):
@@ -143,16 +142,17 @@ async def cb_resume_day(cb: CallbackQuery, state: FSMContext):
         await cb.message.answer("Активного дня нет. Откройте «📅 Сегодня».")
 
 
-@router.callback_query(F.data == "dwait_skip")
-async def cb_skip_wait(cb: CallbackQuery, state: FSMContext):
-    """Пропустить ожидание: сразу открыть вечернюю часть или следующий день (без гейта)."""
-    await cb.answer()
-    await cb.message.edit_reply_markup(reply_markup=None)
-    eid = await resolve_eid(cb.from_user.id, state)
+@router.message(F.text == "⏭ Пропустить ожидание")
+async def cmd_skip_wait(msg: Message, state: FSMContext):
+    """Пропустить ожидание: сразу открыть вечернюю часть или следующий день (без гейта).
+    Пункт главного меню (не кнопка под сообщением) — чтобы не нажималось рефлекторно
+    сразу после закрытия дня, доступно всем режимам."""
+    await state.set_state(None)
+    eid = await resolve_eid(msg.from_user.id, state)
     if not eid:
-        await cb.message.answer("Активной программы нет. Откройте «📅 Сегодня».")
+        await msg.answer("Активной программы нет. Откройте «📅 Сегодня».")
         return
-    await show_today(cb.message, state, eid, force=True)
+    await show_today(msg, state, eid, force=True)
 
 
 async def _render_new(target: Message, state: FSMContext):
@@ -202,8 +202,9 @@ async def _finish_day(target: Message, state: FSMContext):
     if data.get("day_session") == "morning":
         await api.open_day(eid, morning=data["day_morning"])
         await state.set_state(None)
-        # утро закрыто — предлагаем подождать вечера ИЛИ пропустить ожидание (всем)
-        await target.answer(texts.DAY_OPENED, reply_markup=skip_wait_kb())
+        # утро закрыто — предлагаем подождать вечера; пропуск ожидания — в главном меню,
+        # не отдельной кнопкой тут (чтобы не нажималось рефлекторно сразу после действия)
+        await target.answer(texts.DAY_OPENED)
         return
     # вечер — закрываем день
     res = await api.close_day(
@@ -215,8 +216,8 @@ async def _finish_day(target: Message, state: FSMContext):
     if status == "selfcheck_due":
         await show_today(target, state, eid)
     else:
-        # день закрыт — подождать завтра ИЛИ пропустить ожидание к следующему дню (всем)
-        await target.answer(texts.DAY_DONE, reply_markup=skip_wait_kb())
+        # день закрыт — подождать завтра; пропуск ожидания — в главном меню
+        await target.answer(texts.DAY_DONE)
 
 
 # ── маркеры (перекрываются на месте, в конце блока — сводка) ───────────────────

@@ -6,7 +6,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 # Тексты кнопок главного меню — чтобы «escape» из любого состояния (см. flow/ask/…)
 MENU_TEXTS = {
     "📅 Сегодня", "🧭 Мой путь", "📔 Дневник", "🤖 Спросить ИИ", "⚙️ Настройки",
-    "📚 Модули", "🔄 Начать заново",
+    "📚 Модули", "🔄 Начать заново", "⏭ Пропустить ожидание",
 }
 
 # Иконки-градация для маркеров дня (шкала согласия Да…Нет), нейтральные (не «хорошо/плохо»)
@@ -116,13 +116,6 @@ def onboard_start_kb() -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="🚀 Начать", callback_data="onboard_start")]])
 
 
-def skip_wait_kb() -> InlineKeyboardMarkup:
-    """Кнопка пропуска ожидания на экранах «Сегодня» — сразу к следующей сессии/дню.
-    Помечена «(тест)»: для отладки/нетерпеливых; доступна всем."""
-    return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="⏭ Дальше (тест)", callback_data="dwait_skip")]])
-
-
 def active_route_kb() -> InlineKeyboardMarkup:
     """Экран при попытке открыть «Модули», когда уже есть активный маршрут."""
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -167,7 +160,7 @@ def main_menu_kb() -> ReplyKeyboardMarkup:
         [KeyboardButton(text="📅 Сегодня"), KeyboardButton(text="🧭 Мой путь")],
         [KeyboardButton(text="📔 Дневник"), KeyboardButton(text="🤖 Спросить ИИ")],
         [KeyboardButton(text="⚙️ Настройки"), KeyboardButton(text="📚 Модули")],
-        [KeyboardButton(text="🔄 Начать заново")],
+        [KeyboardButton(text="🔄 Начать заново"), KeyboardButton(text="⏭ Пропустить ожидание")],
     ])
 
 
