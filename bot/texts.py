@@ -149,12 +149,24 @@ def journal_index(total: int) -> str:
 
 
 def journal_day(disp: str, entries: list[dict]) -> str:
+    """Записи одного календарного дня. Записи, привязанные к программе (task/reflection),
+    группируются под заголовком «программа · неделя/день» — один раз на группу, а не
+    на каждую запись; заметки/финпродукт (без week/day) идут без заголовка, как есть."""
     head = f"📔 <b>{disp}</b>\n"
     blocks = []
+    last_key = None
     for e in entries:
         label = SOURCE_LABEL.get(e["source_type"], e["source_type"])
-        loc = f" · Н{e['week']}Д{e['day']}" if e.get("week") and e.get("day") else ""
-        blocks.append(f"\n{label}{loc}\n{e['text']}")
+        if e.get("week") and e.get("day"):
+            key = (e.get("module_code"), e["week"], e["day"])
+            if key != last_key:
+                mod_name = e.get("module_name") or e.get("module_code") or ""
+                blocks.append(f"\n🧭 <b>{mod_name} · Неделя {e['week']}, день {e['day']}</b>")
+                last_key = key
+            blocks.append(f"\n{label}\n{e['text']}")
+        else:
+            last_key = None
+            blocks.append(f"\n{label}\n{e['text']}")
     return head + "\n".join(blocks)
 
 

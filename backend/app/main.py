@@ -207,13 +207,20 @@ def enrollment_status(eid: int, db: Session = Depends(get_db)):
 def journal_list(payload: dict = Body(...), db: Session = Depends(get_db)):
     """«Мой дневник» (§8): записи пользователя, свежие сверху. Опц. фильтр module_code."""
     uid = _resolve_user_id(db, payload)
+    language = i18n.resolve_language(db.get(m.User, uid))
     q = select(m.JournalEntry).where(m.JournalEntry.user_id == uid)
     if payload.get("module_code"):
         q = q.where(m.JournalEntry.module_code == payload["module_code"].upper())
     rows = db.execute(q.order_by(m.JournalEntry.created_at.desc(), m.JournalEntry.id.desc())).scalars().all()
+    names: dict[str, str] = {}
+    for code in {j.module_code for j in rows if j.module_code}:
+        mod = db.get(m.Module, code)
+        if mod:
+            names[code] = i18n.overlay(db, m.ModuleTranslation, m.ModuleTranslation.module_code,
+                                       code, language, mod, ["name"])["name"]
     return {"entries": [
         {"id": j.id, "source_type": j.source_type, "module_code": j.module_code,
-         "week": j.week_n, "day": j.day_n, "text": j.text,
+         "module_name": names.get(j.module_code), "week": j.week_n, "day": j.day_n, "text": j.text,
          "created_at": j.created_at.isoformat() if j.created_at else None}
         for j in rows
     ]}
