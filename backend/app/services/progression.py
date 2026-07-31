@@ -125,6 +125,26 @@ def get_today(db: Session, enrollment: m.Enrollment, *, today: _date | None = No
     }
 
 
+def _reflection_questions(db: Session, enrollment: m.Enrollment, week_n: int, day_n: int) -> list[str]:
+    """Тексты 3 вопросов рефлексии этого дня (в языке пользователя) — чтобы записать их
+    вместе с ответом в дневник: сам по себе ответ вида «Первая рефлексия текст» без
+    вопроса непонятен, на что человек отвечал."""
+    week = db.execute(
+        select(m.ModuleWeek).where(m.ModuleWeek.module_code == enrollment.module_code,
+                                   m.ModuleWeek.n == week_n)
+    ).scalar_one_or_none()
+    if week is None:
+        return []
+    day = db.execute(
+        select(m.ModuleDay).where(m.ModuleDay.week_id == week.id, m.ModuleDay.day_n == day_n)
+    ).scalar_one_or_none()
+    if day is None:
+        return []
+    language = i18n.resolve_language(enrollment.user)
+    return i18n.overlay(db, m.ModuleDayTranslation, m.ModuleDayTranslation.day_id, day.id,
+                        language, day, ["reflection"])["reflection"] or []
+
+
 def _sync_journal(db: Session, enrollment: m.Enrollment, week_n: int, day_n: int,
                   reflection: list, task_answer: str | None = None) -> None:
     """Ответ на задание + рефлексии дня → «Мой дневник» (§8, §12.1). Идемпотентно:
@@ -134,6 +154,10 @@ def _sync_journal(db: Session, enrollment: m.Enrollment, week_n: int, day_n: int
     рефлексия (reflection). Маркеры, техстатус, квизы и самопроверка НЕ сохраняются.
     Пустые тексты не создают записей — поэтому авто-прогон тест-режима (пустые ответы)
     дневник не засоряет, а ручной прогон с реальными ответами — наполняет.
+
+    Каждая рефлексия хранится вместе с текстом вопроса, на который она отвечала
+    («Вопрос» на отдельной строке над ответом) — иначе в дневнике видно только
+    ответ без понимания, о чём он.
     """
     db.execute(
         m.JournalEntry.__table__.delete().where(
@@ -149,12 +173,16 @@ def _sync_journal(db: Session, enrollment: m.Enrollment, week_n: int, day_n: int
             module_code=enrollment.module_code, week_n=week_n, day_n=day_n,
             text=task_answer.strip(),
         ))
-    for text in reflection:
+    questions = _reflection_questions(db, enrollment, week_n, day_n) if any(
+        isinstance(t, str) and t.strip() for t in reflection) else []
+    for i, text in enumerate(reflection):
         if isinstance(text, str) and text.strip():
+            q = questions[i] if i < len(questions) else None
+            entry_text = f"«{q}»\n{text.strip()}" if q else text.strip()
             db.add(m.JournalEntry(
                 user_id=enrollment.user_id, source_type="reflection",
                 module_code=enrollment.module_code, week_n=week_n, day_n=day_n,
-                text=text.strip(),
+                text=entry_text,
             ))
 
 
