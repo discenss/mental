@@ -92,24 +92,50 @@ Module целиком и пересоздавала — на Postgres это с�
 
 # Деплой Mental Club на VPS (рядом с rhythmos)
 
-Тот же сервер, что rhythmos (108.181.215.222, домен rhythmos.online), Docker + docker-compose,
+Тот же сервер, что rhythmos (108.181.215.222, домен rhythmos.online), Docker + Compose v2,
 host nginx + certbot. Mental изолирован: свои контейнеры (`mental-*`), сеть, том, порты
 **8010** (backend) и **8011** (bot-webhook). Бот — через **webhook** на сабдомене
 `mental.rhythmos.online`.
 
 Артефакты в репозитории: `docker-compose.prod.yml`, `backend/Dockerfile`+`docker-entrypoint.sh`,
-`bot/Dockerfile`, `deploy.sh`, `infra/nginx/mental.rhythmos.online.conf`, `*.env*.example`.
+`bot/Dockerfile`, `deploy.sh` + `backup.sh` + `restore.sh` (+ общий `lib-compose.sh`),
+`infra/nginx/mental.rhythmos.online.conf`, `*.env*.example`.
 
 ---
 
 ## 0. Предпосылки на сервере
-Docker и docker-compose уже стоят (для rhythmos). Порты 8010/8011 свободны (rhythmos занимает 8000/8001).
+Docker стоит. Порты 8010/8011 свободны (rhythmos занимает 8000/8001).
+
+**Нужен Compose v2** (`docker compose`, плагин). Старый `docker-compose` v1 заброшен с 2021
+и на свежем Docker падает при ПЕРЕСОЗДАНИИ контейнера с `KeyError: 'ContainerConfig'` —
+причём уже после того, как старый контейнер снят, то есть оставляет сервис лежащим.
+`deploy.sh` умеет работать и с v1, но громко предупреждает. Установка без sudo:
+
+```bash
+mkdir -p ~/.docker/cli-plugins
+V=$(curl -s https://api.github.com/repos/docker/compose/releases/latest \
+      | grep -oP '"tag_name": "\K[^"]+')
+curl -sSL -o ~/.docker/cli-plugins/docker-compose \
+  "https://github.com/docker/compose/releases/download/${V}/docker-compose-linux-$(uname -m)"
+chmod +x ~/.docker/cli-plugins/docker-compose
+docker compose version
+```
+
+Ставится в домашний каталог пользователя, глобальный `docker-compose` не трогает —
+поэтому соседний rhythmos продолжает работать как работал.
 
 ## 1. DNS
 Добавить A-запись **`mental.rhythmos.online` → 108.181.215.222** (у регистратора/DNS домена).
 Дождаться распространения (`dig +short mental.rhythmos.online`).
 
 ## 2. Код на сервер
+
+> Каталог проекта — на твой выбор; ниже в примерах `/srv/mental`.
+> **На текущем сервере (108.181.215.222) проект фактически лежит в `~/mental`**
+> (`/home/administrator/mental`), а не в `/srv/mental` — учитывай при копировании команд.
+> Скрипты `deploy.sh` / `backup.sh` / `restore.sh` сами делают `cd` в свой каталог,
+> поэтому от места запуска не зависят.
+
 Вариант A (git): создать приватный репозиторий, запушить, на сервере склонировать в `/srv/mental`.
 ```bash
 sudo mkdir -p /srv/mental && sudo chown $USER /srv/mental
@@ -130,11 +156,18 @@ cp bot/.env.prod.example bot/.env.prod           # BOT_TOKEN, WEBHOOK_*, TESTER_
 ## 4. Поднять контейнеры
 ```bash
 cd /srv/mental
-./deploy.sh          # = docker-compose -f docker-compose.prod.yml up -d --build
+./deploy.sh
 # backend на старте сам делает: alembic upgrade head + load_content (см. docker-entrypoint.sh)
-docker-compose -f docker-compose.prod.yml ps
-docker-compose -f docker-compose.prod.yml logs -f backend
+docker compose -f docker-compose.prod.yml ps
+docker logs -f mental-backend
 ```
+
+`deploy.sh` пересоздаёт backend и bot по одному и ЖДЁТ, пока каждый станет healthy;
+если сервис не поднялся — печатает его логи и выходит с ненулевым кодом. БД не трогает,
+если она уже запущена. Перед деплоем снимает дамп БД (миграции применяются автоматически
+на старте backend, и откатить их нечем).
+
+Флаги: `--no-pull` (не тянуть git), `--no-backup` (без дампа), `--service backend|bot`.
 Проверка API локально: `curl -s http://127.0.0.1:8010/health` → `{"status":"ok"}`.
 
 ⚠️ Первый запуск на Postgres: убедиться, что `alembic upgrade head` прошёл без ошибок
@@ -155,16 +188,48 @@ sudo certbot --nginx -d mental.rhythmos.online     # выдаст SSL, допи�
 ```bash
 curl -s "https://api.telegram.org/bot<BOT_TOKEN>/getWebhookInfo"
 # url должен быть https://mental.rhythmos.online/tg/webhook, pending_update_count маленький
-docker-compose -f docker-compose.prod.yml logs bot | grep -i webhook
+docker logs mental-bot | grep -i webhook
 ```
 Затем написать боту `/start` в Telegram.
 
 ## 7. Обновления
 ```bash
-cd /srv/mental && ./deploy.sh          # git pull + up -d --build
-# только бэкенд/бот:
-docker-compose -f docker-compose.prod.yml up -d --build backend bot
+cd /srv/mental && ./deploy.sh          # git pull + сборка + пересоздание + ожидание healthy
+./deploy.sh --service bot              # только бот
+./deploy.sh --no-pull                  # деплой того, что уже лежит в каталоге
 ```
+
+⚠️ `deploy.sh` откажется тянуть git поверх незакоммиченных изменений в рабочем каталоге —
+чтобы правки, сделанные прямо на сервере, не пропали молча.
+
+## 7б. Бэкапы и перенос БД
+
+Единственное невосполнимое здесь — Postgres-том (пользователи, прогресс, дневники).
+Код в git, образы пересобираются, том — нет.
+
+```bash
+./backup.sh                    # → ./backups/mental-YYYYmmdd-HHMMSS.sql.gz, хранит последние 20
+./backup.sh --keep 50 --out /mnt/backups
+./restore.sh --latest          # налить самый свежий дамп
+./restore.sh backups/mental-20260902-190343.sql.gz
+```
+
+`backup.sh` пишет во временный файл и переименовывает только после проверки целостности:
+оборванный дамп под правильным именем опаснее отсутствующего — на него понадеются.
+Дампы в `.gitignore` (персональные данные пользователей) — в git не попадают.
+
+`restore.sh` останавливает backend и bot на время наливки (иначе гонка и частично
+восстановленная база), делает страховочный дамп текущего состояния в
+`./backups/pre-restore/`, затем поднимает сервисы обратно.
+
+**Перенос на новый сервер:**
+```bash
+# на старом
+./backup.sh && scp backups/mental-*.sql.gz new-host:~/mental/backups/
+# на новом: клонировать репо, заполнить .env-файлы (см. §3), затем
+./deploy.sh && ./restore.sh --latest
+```
+Порядок важен: сначала `deploy.sh` (создаст схему через alembic), потом `restore.sh`.
 
 ## Заметки / что учесть
 - **Один токен = один getUpdates/webhook.** Локальный polling-бот на этом же токене нужно
