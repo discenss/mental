@@ -32,6 +32,10 @@ done
 detect_compose
 echo "→ compose: $COMPOSE_KIND"
 
+# DB_USER/DB_NAME — те же дефолты, что в docker-compose.prod.yml
+# shellcheck disable=SC1091
+[ -f .env ] && set -a && . ./.env && set +a
+
 echo "→ проверка .env-файлов"
 for f in .env backend/.env.prod bot/.env.prod; do
   [ -f "$f" ] || { echo "  ОТСУТСТВУЕТ $f — скопируй из *.example и заполни"; exit 1; }
@@ -66,8 +70,19 @@ SERVICES=(backend bot)
 echo "→ сборка образов: ${SERVICES[*]}"
 compose build "${SERVICES[@]}"
 
-echo "→ поднимаем БД (если не запущена)"
-compose up -d db
+# Только если БД реально не запущена. Обычный «compose up -d db» пересоздаёт контейнер,
+# когда конфиг/образ разошлись с текущим, — при деплое КОДА это лишний даунтайм БД
+# (данные в именованном томе pgdata_mental переживают пересоздание, но рисковать незачем).
+if docker ps --format '{{.Names}}' | grep -qx "$(container_of db)"; then
+  echo "→ БД уже запущена — не трогаем"
+else
+  echo "→ поднимаем БД"
+  compose up -d db
+  for _ in $(seq 1 60); do
+    docker exec "$(container_of db)" pg_isready -U "${DB_USER:-mental}" >/dev/null 2>&1 && break
+    sleep 2
+  done
+fi
 
 # Пересоздаём по одному сервису, а не «compose up» по всему стеку:
 #  — на v1 «up» поверх существующего контейнера падает на ContainerConfig и оставляет сервис лежащим;
