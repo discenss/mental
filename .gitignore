@@ -8,6 +8,9 @@ backend/*.db
 # (аудио доставляется на сервер отдельно; интеграция аудио — отдельный шаг)
 content/audio/
 content/modules/_fragments/
+# дампы БД — персональные данные пользователей (дневники, прогресс). НИКОГДА не в git.
+backups/
+*.sql.gz
 # env (секреты — НЕ коммитим; .env.example/.env.prod.example коммитим)
 .env
 .env.prod
