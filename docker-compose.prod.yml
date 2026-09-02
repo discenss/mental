@@ -1,9 +1,9 @@
 # Production Docker Compose — Mental Club
 # Живёт рядом с rhythmos на том же VPS: свои имена/сеть/тома, порты 8010/8011
 # (rhythmos занимает 8000/8001). Host nginx проксирует mental.rhythmos.online → эти порты.
-# Запуск:  docker-compose -f docker-compose.prod.yml up -d --build
+# Запуск:  ./deploy.sh   (сам находит docker compose v2 или v1)
 
-version: '3.9'
+# Ключ `version:` намеренно отсутствует — он устарел, Compose v2 на него ругается.
 
 services:
   db:
