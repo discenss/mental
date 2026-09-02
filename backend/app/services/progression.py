@@ -72,6 +72,30 @@ def _day(db: Session, module_code: str, week_n: int, day_n: int, language: str):
     return week, day, week_view, day_view
 
 
+def get_markers(db: Session, enrollment: m.Enrollment, *,
+                language: str | None = None) -> tuple[list[dict], list[dict]]:
+    """Маркеры модуля (утро/вечер) в языке пользователя.
+
+    Спрашиваются РАЗ В НЕДЕЛЮ — блоком перед недельной самопроверкой, а не каждый день
+    (ежедневные 10 вопросов оказались утомительными и однообразными). Само деление на
+    morning/evening осталось контентным: это два разных набора вопросов (состояние на
+    входе в день / итог дня), а не время суток.
+    """
+    language = language or i18n.resolve_language(enrollment.user)
+    markers = db.execute(
+        select(m.Marker).where(m.Marker.module_code == enrollment.module_code)
+        .order_by(m.Marker.phase, m.Marker.idx)
+    ).scalars().all()
+
+    def _view(x: m.Marker) -> dict:
+        v = i18n.overlay(db, m.MarkerTranslation, m.MarkerTranslation.marker_id, x.id,
+                         language, x, ["question", "options"])
+        return {"idx": x.idx, "question": v["question"], "options": v["options"]}
+
+    return ([_view(x) for x in markers if x.phase == "morning"],
+            [_view(x) for x in markers if x.phase == "evening"])
+
+
 def get_today(db: Session, enrollment: m.Enrollment, *, today: _date | None = None) -> dict:
     if enrollment.status == "completed":
         return {"status": "completed"}
@@ -88,16 +112,6 @@ def get_today(db: Session, enrollment: m.Enrollment, *, today: _date | None = No
     language = i18n.resolve_language(enrollment.user)
     week, day, week_view, day_view = _day(db, enrollment.module_code, enrollment.current_week,
                                          enrollment.current_day, language)
-    markers = db.execute(
-        select(m.Marker).where(m.Marker.module_code == enrollment.module_code)
-        .order_by(m.Marker.phase, m.Marker.idx)
-    ).scalars().all()
-    def _marker_view(x: m.Marker) -> dict:
-        v = i18n.overlay(db, m.MarkerTranslation, m.MarkerTranslation.marker_id, x.id,
-                         language, x, ["question", "options"])
-        return {"idx": x.idx, "question": v["question"], "options": v["options"]}
-    morning = [_marker_view(x) for x in markers if x.phase == "morning"]
-    evening = [_marker_view(x) for x in markers if x.phase == "evening"]
     audio = db.execute(
         select(m.AudioAsset).where(m.AudioAsset.module_code == enrollment.module_code,
                                    m.AudioAsset.week_n == enrollment.current_week)
@@ -112,7 +126,8 @@ def get_today(db: Session, enrollment: m.Enrollment, *, today: _date | None = No
         "week_intro": {"title": week_view["title"], "intro_screen": week_view["intro_screen"],
                        "meaning": week_view["meaning"], "goal": week_view["goal"],
                        "result": week_view["result"], "key_themes": week_view["key_themes"]},
-        "morning_markers": morning, "evening_markers": evening,
+        # маркеры в дневную выдачу НЕ входят: их спрашивают раз в неделю,
+        # блоком перед самопроверкой (см. get_markers / selfcheck).
         "focus": day_view["focus"],
         "task": {"text": day_view["task_text"], "subtasks": day_view["task_subtasks"]},
         "quiz": day_view["quiz"],
@@ -202,13 +217,16 @@ def _advance(enrollment: m.Enrollment, d: int) -> None:
         enrollment.status = "selfcheck_due"   # день 7 пройден → пора самопроверке
 
 
-def open_day(db: Session, enrollment: m.Enrollment, *, morning=None,
+def open_day(db: Session, enrollment: m.Enrollment, *,
              entry_date: _date | None = None) -> dict:
-    """Утренняя сессия: открыть день (маркеры + показ фокуса/задания). Без продвижения."""
+    """Утренняя сессия: открыть день (фокус/задание/аудио). Без продвижения.
+
+    Маркеры здесь больше не спрашиваются — они переехали в недельный блок перед
+    самопроверкой (см. submit_selfcheck).
+    """
     if enrollment.status != "active":
         raise ValueError(f"нельзя открыть день в статусе {enrollment.status}")
     entry, w, d = _get_or_create_entry(db, enrollment)
-    entry.morning_answers = morning or {}
     entry.morning_done = True
     entry.entry_date = entry_date or _date.today()
     db.commit()
@@ -216,9 +234,9 @@ def open_day(db: Session, enrollment: m.Enrollment, *, morning=None,
 
 
 def close_day(db: Session, enrollment: m.Enrollment, *, task_status=None, task_answer=None,
-              quiz_answer=None, evening=None, reflection=None, entry_date: _date | None = None) -> dict:
-    """Вечерняя сессия: статус задания + (опц.) ответ на задание + квиз + вечерние маркеры
-    + рефлексия → продвижение."""
+              quiz_answer=None, reflection=None, entry_date: _date | None = None) -> dict:
+    """Вечерняя сессия: статус задания + (опц.) ответ на задание + квиз + рефлексия
+    → продвижение. Маркеры — раз в неделю, см. submit_selfcheck."""
     if enrollment.status != "active":
         raise ValueError(f"нельзя закрыть день в статусе {enrollment.status}")
     entry, w, d = _get_or_create_entry(db, enrollment)
@@ -228,7 +246,6 @@ def close_day(db: Session, enrollment: m.Enrollment, *, task_status=None, task_a
     entry.task_status = task_status
     entry.task_answer = task_answer
     entry.quiz_answer = quiz_answer
-    entry.evening_answers = evening or {}
     entry.reflection_answers = reflection or []
     entry.evening_done = True
     _sync_journal(db, enrollment, w, d, reflection or [], task_answer=task_answer)
@@ -238,18 +255,16 @@ def close_day(db: Session, enrollment: m.Enrollment, *, task_status=None, task_a
             "day": enrollment.current_day}
 
 
-def complete_day(db: Session, enrollment: m.Enrollment, *, morning=None, task_status=None,
-                 task_answer=None, quiz_answer=None, evening=None, reflection=None,
+def complete_day(db: Session, enrollment: m.Enrollment, *, task_status=None,
+                 task_answer=None, quiz_answer=None, reflection=None,
                  entry_date: _date | None = None) -> dict:
     """Весь день одним вызовом (тест-режим/авто-прогон): обе сессии сразу + продвижение."""
     if enrollment.status != "active":
         raise ValueError(f"нельзя завершить день в статусе {enrollment.status}")
     entry, w, d = _get_or_create_entry(db, enrollment)
-    entry.morning_answers = morning or {}
     entry.task_status = task_status
     entry.task_answer = task_answer
     entry.quiz_answer = quiz_answer
-    entry.evening_answers = evening or {}
     entry.reflection_answers = reflection or []
     entry.entry_date = entry_date or _date.today()
     entry.morning_done = True
@@ -261,11 +276,39 @@ def complete_day(db: Session, enrollment: m.Enrollment, *, morning=None, task_st
             "day": enrollment.current_day}
 
 
-def submit_selfcheck(db: Session, enrollment: m.Enrollment, answers: dict[int, int]) -> dict:
-    """Проводит самопроверку недели, затем открывает следующую неделю / завершает модуль."""
+def _save_week_markers(db: Session, enrollment: m.Enrollment, week_n: int,
+                       morning=None, evening=None) -> None:
+    """Недельные маркеры → запись последнего дня недели (день 7).
+
+    Отдельной таблицы под них не заводим: DailyEntry.morning_answers/evening_answers уже
+    хранят ровно этот формат {idx: choice}, и до перевода на недельный ритм маркеры лежали
+    именно там. Меняется только частота записи — раз в неделю вместо семи раз.
+    """
+    entry = db.execute(
+        select(m.DailyEntry).where(m.DailyEntry.enrollment_id == enrollment.id,
+                                   m.DailyEntry.week_n == week_n,
+                                   m.DailyEntry.day_n == 7)
+    ).scalar_one_or_none()
+    if entry is None:
+        entry = m.DailyEntry(enrollment_id=enrollment.id, week_n=week_n, day_n=7)
+        db.add(entry)
+    entry.morning_answers = morning or {}
+    entry.evening_answers = evening or {}
+
+
+def submit_selfcheck(db: Session, enrollment: m.Enrollment, answers: dict[int, int], *,
+                     morning=None, evening=None) -> dict:
+    """Проводит самопроверку недели, затем открывает следующую неделю / завершает модуль.
+
+    `morning`/`evening` — недельные маркеры, которые спрашиваются блоком перед вопросами
+    самопроверки. В баллы они не идут (веса только у selfcheck-вопросов); пишутся в запись
+    последнего дня недели как срез состояния.
+    """
     if enrollment.status != "selfcheck_due":
         raise ValueError(f"самопроверка недоступна в статусе {enrollment.status}")
     week_n = enrollment.current_week
+    if morning or evening:
+        _save_week_markers(db, enrollment, week_n, morning, evening)
     result = scoring.score_week(db, enrollment, week_n, answers)
 
     if week_n < 6:

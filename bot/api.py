@@ -115,9 +115,12 @@ class API:
     async def selfcheck_questions(self, eid: int) -> dict:
         return await self._get(f"/api/v1/enrollments/{eid}/selfcheck-questions")
 
-    async def selfcheck(self, eid: int, answers: dict[int, int]) -> dict:
+    async def selfcheck(self, eid: int, answers: dict[int, int], *,
+                        morning: dict | None = None, evening: dict | None = None) -> dict:
+        """morning/evening — недельные маркеры (спрашиваются блоком перед вопросами)."""
         return await self._post(f"/api/v1/enrollments/{eid}/selfcheck",
-                               {"answers": {str(k): v for k, v in answers.items()}})
+                               {"answers": {str(k): v for k, v in answers.items()},
+                                "morning": morning or {}, "evening": evening or {}})
 
     async def final_product_template(self, eid: int) -> dict:
         return await self._get(f"/api/v1/enrollments/{eid}/final-product/template")

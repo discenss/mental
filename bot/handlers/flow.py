@@ -1,5 +1,8 @@
-"""Дневной flow: маркеры (перекрываются на месте + сводка иконками) → фокус+задание →
-квиз → вечерние маркеры → рефлексии. И недельная самопроверка.
+"""Дневной flow: фокус+задание → квиз → рефлексии. И недельная самопроверка, которая
+начинается с блока маркеров (перекрываются на месте + сводка иконками).
+
+Маркеры спрашиваются РАЗ В НЕДЕЛЮ, перед вопросами самопроверки: 10 одинаковых вопросов
+каждый день утомляли и не давали новой информации.
 
 Дневной гейт «1 день/сутки» — здесь (клиент). Бэкенд time-agnostic.
 """
@@ -13,8 +16,8 @@ from config import AUDIO_DIR
 
 import texts
 from api import api
-from keyboards import (MARKER_ICONS, MENU_TEXTS, main_menu_kb, marker_kb, next_kb,
-                       options_kb, skip_kb, task_status_kb)
+from keyboards import (MARKER_ICONS, MENU_TEXTS, SCALE_ICONS, main_menu_kb, marker_kb,
+                       next_kb, options_kb, skip_kb, task_status_kb)
 from states import DayStates, FinalProductStates, PostmoduleStates, SelfcheckStates
 from voice import message_text
 from handlers.progress import resolve_eid
@@ -32,11 +35,8 @@ def _task_text(today: dict) -> str:
 
 
 def _build_morning_steps(today: dict) -> list[dict]:
-    """Утренняя сессия: открыть день — утренние маркеры + фокус + показ задания."""
+    """Утренняя сессия: открыть день — фокус + показ задания (+ аудио)."""
     steps: list[dict] = []
-    for mk in today["morning_markers"]:
-        steps.append({"kind": "marker", "phase": "morning", "idx": mk["idx"],
-                      "question": mk["question"], "options": mk["options"]})
     for q in today.get("intent_questions") or []:           # W6-спец
         steps.append({"kind": "info", "text": f"🎯 {q}"})
     combined = (f"📌 <b>Фокус дня</b>\n{today['focus']}\n\n📝 <b>Задание дня</b>\n{_task_text(today)}"
@@ -51,32 +51,49 @@ def _build_morning_steps(today: dict) -> list[dict]:
 
 
 def _build_evening_steps(today: dict) -> list[dict]:
-    """Вечерняя сессия: закрыть день — статус задания + квиз + вечерние маркеры + рефлексия."""
+    """Вечерняя сессия: закрыть день — статус задания + квиз + рефлексия."""
     steps: list[dict] = []
     steps.append({"kind": "focustask",
                   "text": f"📝 <b>Задание дня</b>\n{_task_text(today)}\n\nКак прошло сегодня?"})
     quiz = today.get("quiz") or {}
     if quiz.get("question"):
         steps.append({"kind": "quiz", "question": quiz["question"], "options": quiz.get("options", [])})
-    for mk in today["evening_markers"]:
-        steps.append({"kind": "marker", "phase": "evening", "idx": mk["idx"],
-                      "question": mk["question"], "options": mk["options"]})
     for q in today.get("reflection", []):
         steps.append({"kind": "free_text", "prompt": q})
     return steps
 
 
 def _phase_summary(phase: str, answers: dict, opts: dict) -> str:
+    """Свернуть блок маркеров фазы в строку иконок-градаций.
+
+    У модулей два стиля вариантов: фиксированная шкала Да/Скорее да/Скорее нет/Нет (BOUND)
+    и свободные формулировки (REAL, «есть ощущение движения» / «скорее пауза» / …). Для
+    первого берём иконку по подписи, для второго — по позиции в списке: варианты в контенте
+    идут от «лучше» к «хуже», поэтому позиция и есть градация. Иначе у половины модулей
+    сводка была бы из одних точек.
+    """
     head = "☀️ Утро:" if phase == "morning" else "🌙 Вечер:"
     icons = []
     for idx in sorted(opts):
         ci = answers.get(str(idx))
-        if ci is None:
+        options = opts[idx]
+        if ci is None or ci >= len(options):
             icons.append("·")
             continue
-        label = opts[idx][ci] if ci < len(opts[idx]) else ""
-        icons.append(MARKER_ICONS.get(label, "·"))
+        label = options[ci]
+        if label in MARKER_ICONS:
+            icons.append(MARKER_ICONS[label])
+        else:
+            icons.append(SCALE_ICONS[_scale_pos(ci, len(options))])
     return f"{head} {' '.join(icons)}"
+
+
+def _scale_pos(ci: int, n: int) -> int:
+    """Позиция варианта (0 — первый/«лучший») → ступень шкалы 0..4 для SCALE_ICONS,
+    где 4 = «полный круг». Один вариант — считаем серединой."""
+    if n <= 1:
+        return 2
+    return 4 - round(ci * 4 / (n - 1))
 
 
 # ── запуск дня ────────────────────────────────────────────────────────────────
@@ -113,11 +130,8 @@ async def show_today(target: Message, state: FSMContext, eid: int, *, force: boo
     else:
         steps = _build_evening_steps(today)
         header = f"🌇 Закрываем день. Неделя {today['week']}, день {today['day']}: <b>{today['day_title']}</b>"
-    mopts = {mk["idx"]: mk["options"] for mk in today["morning_markers"]}
-    eopts = {mk["idx"]: mk["options"] for mk in today["evening_markers"]}
     await state.update_data(eid=eid, day_session=session, day_steps=steps, day_i=0,
-                            day_mopts=mopts, day_eopts=eopts, day_active=True,
-                            day_morning={}, day_evening={}, day_task_status=None,
+                            day_active=True, day_task_status=None,
                             day_quiz=None, day_reflection=[])
     await state.set_state(DayStates.running)
     await target.answer(header)
@@ -160,10 +174,7 @@ async def _render_new(target: Message, state: FSMContext):
     data = await state.get_data()
     step = data["day_steps"][data["day_i"]]
     k = step["kind"]
-    if k == "marker":
-        emoji = "☀️" if step["phase"] == "morning" else "🌙"
-        await target.answer(f"{emoji} {step['question']}", reply_markup=marker_kb(step["options"], "mk"))
-    elif k == "quiz":
+    if k == "quiz":
         await target.answer(f"❓ {step['question']}", reply_markup=options_kb(step["options"], "qz"))
     elif k == "focustask":
         await target.answer(step["text"], reply_markup=task_status_kb())
@@ -200,7 +211,7 @@ async def _finish_day(target: Message, state: FSMContext):
     eid = data["eid"]
     await state.update_data(day_active=False)            # день больше не в процессе
     if data.get("day_session") == "morning":
-        await api.open_day(eid, morning=data["day_morning"])
+        await api.open_day(eid)
         await state.set_state(None)
         # утро закрыто — предлагаем подождать вечера; пропуск ожидания — в главном меню,
         # не отдельной кнопкой тут (чтобы не нажималось рефлекторно сразу после действия).
@@ -209,7 +220,7 @@ async def _finish_day(target: Message, state: FSMContext):
         return
     # вечер — закрываем день
     res = await api.close_day(
-        eid, evening=data["day_evening"], task_status=data["day_task_status"],
+        eid, task_status=data["day_task_status"],
         quiz_answer=data["day_quiz"], reflection=data["day_reflection"],
     )
     await state.set_state(None)
@@ -220,36 +231,6 @@ async def _finish_day(target: Message, state: FSMContext):
         # день закрыт — подождать завтра; пропуск ожидания — в главном меню (reply_markup
         # здесь же, чтобы Telegram точно обновил клавиатуру снизу новой кнопкой)
         await target.answer(texts.DAY_DONE, reply_markup=main_menu_kb())
-
-
-# ── маркеры (перекрываются на месте, в конце блока — сводка) ───────────────────
-
-@router.callback_query(DayStates.running, F.data.startswith("mk:"))
-async def cb_marker(cb: CallbackQuery, state: FSMContext):
-    idx = int(cb.data.split(":")[1])
-    data = await state.get_data()
-    i = data["day_i"]
-    step = data["day_steps"][i]
-    phase = step["phase"]
-    key = "day_" + phase
-    answers = data[key]
-    answers[str(step["idx"])] = idx
-    await state.update_data(**{key: answers})
-    await cb.answer()
-
-    steps = data["day_steps"]
-    nxt = steps[i + 1] if i + 1 < len(steps) else None
-    if nxt and nxt["kind"] == "marker" and nxt["phase"] == phase:
-        # тот же блок — следующий вопрос перекрывает текущий
-        await state.update_data(day_i=i + 1)
-        emoji = "☀️" if phase == "morning" else "🌙"
-        await cb.message.edit_text(f"{emoji} {nxt['question']}",
-                                   reply_markup=marker_kb(nxt["options"], "mk"))
-        return
-    # конец блока маркеров — замораживаем карточку в сводку иконками
-    opts = data["day_mopts"] if phase == "morning" else data["day_eopts"]
-    await cb.message.edit_text(_phase_summary(phase, answers, opts))
-    await _next_new(cb.message, state)
 
 
 # ── квиз ──────────────────────────────────────────────────────────────────────
@@ -375,16 +356,72 @@ async def msg_free_text(msg: Message, state: FSMContext):
 
 @router.callback_query(F.data == "sc_start")
 async def cb_selfcheck_start(cb: CallbackQuery, state: FSMContext):
+    """Итоги недели: сначала блок маркеров (10 вопросов о состоянии — раз в неделю,
+    а не каждый день), затем вопросы самопроверки с весами."""
     data = await state.get_data()
     eid = data.get("eid")
     payload = await api.selfcheck_questions(eid)
-    await state.update_data(sc_questions=payload["questions"], sc_idx=0, sc_answers={})
+    markers = [{"phase": "morning", **mk} for mk in payload.get("morning_markers") or []]
+    markers += [{"phase": "evening", **mk} for mk in payload.get("evening_markers") or []]
+    await state.update_data(
+        sc_questions=payload["questions"], sc_idx=0, sc_answers={},
+        sc_markers=markers, sc_mk_i=0, sc_morning={}, sc_evening={},
+        sc_mopts={mk["idx"]: mk["options"] for mk in markers if mk["phase"] == "morning"},
+        sc_eopts={mk["idx"]: mk["options"] for mk in markers if mk["phase"] == "evening"})
     await state.set_state(SelfcheckStates.answering)
     await cb.answer()
-    q = payload["questions"][0]
-    sent = await cb.message.answer(f"🧾 Итоги недели — вопрос 1/{len(payload['questions'])}\n\n{q['question']}",
-                                   reply_markup=options_kb(q["options"], "sc"))
+    if markers:
+        await cb.message.answer("🧾 Итоги недели. Сначала — как прошла неделя по ощущениям.")
+        await _sc_ask_marker(cb.message, state, 0)
+        return
+    await _sc_ask_first_question(cb.message, state)
+
+
+async def _sc_ask_marker(target: Message, state: FSMContext, i: int):
+    data = await state.get_data()
+    mk = data["sc_markers"][i]
+    emoji = "☀️" if mk["phase"] == "morning" else "🌙"
+    await target.answer(f"{emoji} {mk['question']}", reply_markup=marker_kb(mk["options"], "scmk"))
+
+
+async def _sc_ask_first_question(target: Message, state: FSMContext):
+    data = await state.get_data()
+    qs = data["sc_questions"]
+    sent = await target.answer(f"🧾 Итоги недели — вопрос 1/{len(qs)}\n\n{qs[0]['question']}",
+                               reply_markup=options_kb(qs[0]["options"], "sc"))
     await state.update_data(sc_msg_id=sent.message_id)
+
+
+@router.callback_query(SelfcheckStates.answering, F.data.startswith("scmk:"))
+async def cb_sc_marker(cb: CallbackQuery, state: FSMContext):
+    """Недельные маркеры: вопросы перекрываются на месте, в конце блока фазы — сводка иконками."""
+    choice = int(cb.data.split(":")[1])
+    data = await state.get_data()
+    i = data["sc_mk_i"]
+    markers = data["sc_markers"]
+    mk = markers[i]
+    phase = mk["phase"]
+    key = "sc_" + phase
+    answers = data[key]
+    answers[str(mk["idx"])] = choice
+    await state.update_data(**{key: answers})
+    await cb.answer()
+
+    nxt = markers[i + 1] if i + 1 < len(markers) else None
+    if nxt and nxt["phase"] == phase:
+        await state.update_data(sc_mk_i=i + 1)
+        emoji = "☀️" if phase == "morning" else "🌙"
+        await cb.message.edit_text(f"{emoji} {nxt['question']}",
+                                   reply_markup=marker_kb(nxt["options"], "scmk"))
+        return
+    # конец блока фазы — замораживаем карточку в сводку иконками
+    opts = data["sc_mopts"] if phase == "morning" else data["sc_eopts"]
+    await cb.message.edit_text(_phase_summary(phase, answers, opts))
+    if nxt:
+        await state.update_data(sc_mk_i=i + 1)
+        await _sc_ask_marker(cb.message, state, i + 1)
+        return
+    await _sc_ask_first_question(cb.message, state)
 
 
 @router.callback_query(SelfcheckStates.answering, F.data.startswith("sc:"))
@@ -402,7 +439,8 @@ async def cb_sc_answer(cb: CallbackQuery, state: FSMContext):
                                    reply_markup=options_kb(qs[i + 1]["options"], "sc"))
         return
     await cb.message.edit_text("🧾 Подвожу итоги недели…")
-    res = await api.selfcheck(data["eid"], {int(k): v for k, v in answers.items()})
+    res = await api.selfcheck(data["eid"], {int(k): v for k, v in answers.items()},
+                              morning=data.get("sc_morning"), evening=data.get("sc_evening"))
     await state.set_state(None)
     await cb.message.answer(
         texts.selfcheck_result(res),

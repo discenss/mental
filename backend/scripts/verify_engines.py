@@ -62,7 +62,10 @@ def main():
     e = progression.enroll(db, UID, "BOUND")
     today = progression.get_today(db, e)
     assert today["status"] == "active" and today["week"] == 1 and today["day"] == 1
-    assert len(today["morning_markers"]) == 5 and len(today["evening_markers"]) == 5
+    # маркеры — недельные: в дневной выдаче их нет, они приходят к самопроверке
+    assert "morning_markers" not in today and "evening_markers" not in today
+    mk_morning, mk_evening = progression.get_markers(db, e)
+    assert len(mk_morning) == 5 and len(mk_evening) == 5
     assert today["audio"]["code"] == "AUDIO_BOUND_W1_A1"
 
     week_zones = []
@@ -71,9 +74,17 @@ def main():
             st = progression.complete_day(db, e, task_status="DONE",
                                           quiz_answer="да", reflection=["a", "b", "c"])
         assert st["status"] == "selfcheck_due", (wk, st)
-        res = progression.submit_selfcheck(db, e, best_answers(db, "BOUND", wk))
+        res = progression.submit_selfcheck(
+            db, e, best_answers(db, "BOUND", wk),
+            morning={str(x["idx"]): 0 for x in mk_morning},
+            evening={str(x["idx"]): 0 for x in mk_evening})
         week_zones.append(res["zone"])
         assert res["blocks_progression"] is False
+        # недельные маркеры записались в день 7 этой недели
+        d7 = db.execute(select(m.DailyEntry).where(m.DailyEntry.enrollment_id == e.id,
+                                                   m.DailyEntry.week_n == wk,
+                                                   m.DailyEntry.day_n == 7)).scalar_one()
+        assert len(d7.morning_answers) == 5 and len(d7.evening_answers) == 5, (wk, d7.morning_answers)
     e_final = db.get(m.Enrollment, e.id)
     assert e_final.status == "completed", e_final.status
     assert week_zones == ["GREEN"] * 6, week_zones

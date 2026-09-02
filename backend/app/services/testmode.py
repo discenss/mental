@@ -38,6 +38,18 @@ def auto_selfcheck(db: Session, module_code: str, week_n: int, preset: str,
     return out
 
 
+def _auto_markers(markers: list[dict], preset: str, rnd: random.Random) -> dict[str, int]:
+    """Авто-ответы на недельные маркеры. Весов у маркеров нет (в баллы они не идут),
+    поэтому best/worst — это просто первый/последний вариант шкалы."""
+    out = {}
+    for mk in markers:
+        n = len(mk["options"])
+        if not n:
+            continue
+        out[str(mk["idx"])] = rnd.randrange(n) if preset == "random" else (0 if preset == "best" else n - 1)
+    return out
+
+
 def _auto_postmodule_answers(db: Session, module_code: str, preset: str,
                              rnd: random.Random) -> dict:
     cfg = db.get(m.PostmoduleConfig, module_code)
@@ -75,7 +87,6 @@ def run(db: Session, enrollment: m.Enrollment, scope: str = "day",
                 "event": "day", "week": t["week"], "day": t["day"], "day_title": t["day_title"],
                 "focus": t["focus"], "task": t["task"], "quiz": t["quiz"],
                 "audio": t["audio"], "reflection": t["reflection"],
-                "morning_markers": t["morning_markers"], "evening_markers": t["evening_markers"],
                 "intent_questions": t.get("intent_questions") or [],
             })
             # авто-прогон не пишет рефлексии-заглушки: пустой список → дневник/ИИ-итог чисты
@@ -86,9 +97,15 @@ def run(db: Session, enrollment: m.Enrollment, scope: str = "day",
         elif t["status"] == "selfcheck_due":
             wk = t["week"]
             ans = auto_selfcheck(db, enrollment.module_code, wk, preset, rnd)
-            res = progression.submit_selfcheck(db, enrollment, ans)
+            # маркеры теперь недельные — их спрашивают блоком перед самопроверкой
+            morning_mk, evening_mk = progression.get_markers(db, enrollment)
+            res = progression.submit_selfcheck(
+                db, enrollment, ans,
+                morning=_auto_markers(morning_mk, preset, rnd),
+                evening=_auto_markers(evening_mk, preset, rnd))
             steps.append({
                 "event": "selfcheck", "week": wk, "preset": preset,
+                "morning_markers": morning_mk, "evening_markers": evening_mk,
                 "core_score": res["core_score"], "zone": res["zone"],
                 "user_text": res["user_text"], "recommendation": res["recommendation"],
                 "critical_texts": res["critical_texts"], "flags": res["flags"],

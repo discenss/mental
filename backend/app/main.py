@@ -299,18 +299,17 @@ def audio_file(code: str, lang: str = "ru", db: Session = Depends(get_db)):
 
 @app.post("/api/v1/enrollments/{eid}/open-day")
 def open_day(eid: int, payload: dict = Body(default={}), db: Session = Depends(get_db)):
-    """Утренняя сессия: открыть день (утренние маркеры)."""
-    return progression.open_day(db, _enrollment(db, eid), morning=payload.get("morning"))
+    """Утренняя сессия: открыть день (фокус/задание/аудио)."""
+    return progression.open_day(db, _enrollment(db, eid))
 
 
 @app.post("/api/v1/enrollments/{eid}/close-day")
 def close_day(eid: int, payload: dict = Body(default={}), db: Session = Depends(get_db)):
-    """Вечерняя сессия: статус задания + квиз + вечерние маркеры + рефлексия → продвижение."""
+    """Вечерняя сессия: статус задания + квиз + рефлексия → продвижение."""
     return progression.close_day(
         db, _enrollment(db, eid),
         task_status=payload.get("task_status"), task_answer=payload.get("task_answer"),
-        quiz_answer=payload.get("quiz_answer"),
-        evening=payload.get("evening"), reflection=payload.get("reflection"),
+        quiz_answer=payload.get("quiz_answer"), reflection=payload.get("reflection"),
     )
 
 
@@ -319,9 +318,9 @@ def complete_day(eid: int, payload: dict = Body(default={}), db: Session = Depen
     """Весь день одним вызовом (тест-режим/авто-прогон)."""
     return progression.complete_day(
         db, _enrollment(db, eid),
-        morning=payload.get("morning"), task_status=payload.get("task_status"),
+        task_status=payload.get("task_status"),
         task_answer=payload.get("task_answer"), quiz_answer=payload.get("quiz_answer"),
-        evening=payload.get("evening"), reflection=payload.get("reflection"),
+        reflection=payload.get("reflection"),
     )
 
 
@@ -348,14 +347,20 @@ def selfcheck_questions(eid: int, db: Session = Depends(get_db)):
                 question_text = tr.question or question_text
                 base_texts = tr.option_texts or base_texts
         out.append({"q": q.q_index, "question": question_text, "options": base_texts})
-    return {"week": e.current_week, "questions": out}
+    # маркеры идут блоком ПЕРЕД вопросами самопроверки: раз в неделю вместо ежедневных 10
+    morning, evening = progression.get_markers(db, e, language=language)
+    return {"week": e.current_week, "questions": out,
+            "morning_markers": morning, "evening_markers": evening}
 
 
 @app.post("/api/v1/enrollments/{eid}/selfcheck")
 def selfcheck(eid: int, payload: dict = Body(...), db: Session = Depends(get_db)):
-    """{answers:{'1':idx,...10}} → зона + рекомендация + critical-блоки (баллы скрыты)."""
+    """{answers:{'1':idx,...10}, morning:{...}, evening:{...}} → зона + рекомендация +
+    critical-блоки (баллы скрыты). morning/evening — недельные маркеры, в баллы не идут."""
     answers = {int(k): int(v) for k, v in payload["answers"].items()}
-    r = progression.submit_selfcheck(db, _enrollment(db, eid), answers)
+    r = progression.submit_selfcheck(db, _enrollment(db, eid), answers,
+                                     morning=payload.get("morning"),
+                                     evening=payload.get("evening"))
     r.pop("core_score", None); r.pop("flags", None)
     return r
 
