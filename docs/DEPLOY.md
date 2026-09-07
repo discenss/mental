@@ -245,3 +245,40 @@ cd /srv/mental && ./deploy.sh          # git pull + сборка + пересо�
 - **Postgres-бэкапы:** `docker exec mental-db pg_dump -U mental mental > backup.sql` (по крону).
 - **WhatsApp (позже):** identity уже мультиканальный (`provider=whatsapp`). Нужен Meta/Twilio
   аккаунт + номер + webhook-роутер на бэкенде (образец — `rhythmos/backend/app/routers/whatsapp.py`).
+
+---
+
+## 🔐 Домен + SSL + авторизация iOS — 2026-09-07
+
+**`mental.rhythmos.online` заработал.** Раньше поддомен уходил на `91.206.200.90`
+(старый хостинг adm.tools) — в зоне не было явной A-записи, и его подхватывал
+wildcard. Добавлена запись `mental → 108.181.215.222`, после чего:
+
+- nginx: `infra/nginx/mental.rhythmos.online.conf` → sites-enabled, reload;
+- сертификат: `certbot --nginx -d mental.rhythmos.online --redirect`,
+  истекает 2026-12-06, автопродление настроено самим certbot;
+- HTTP отдаёт 301 на HTTPS.
+
+Проверено снаружи: `https://mental.rhythmos.online/health` → 200, TLS валиден,
+`/api/v1/auth/apple` → 401 на мусорный токен, link-код выдаётся.
+**`rhythmos.online` не затронут** — по-прежнему 200 (это отдельный продукт,
+занимать его домен нельзя).
+
+### Секреты в backend/.env.prod (дописаны при этом деплое)
+
+```
+JWT_SECRET=<openssl rand -hex 32>            # без него /auth/* отдаёт 503
+APPLE_BUNDLE_IDS=day.ridge.app,day.ridge.app.dev,day.ridge.app.beta
+```
+
+`INTERNAL_API_TOKEN` намеренно пуст: как только он задан, `/reminders/due` и
+`/reminders/mark` начнут требовать токен, а бот его пока не шлёт (его авторизацию
+решено не трогать). Заполнять только вместе с настройкой бота.
+
+`GOOGLE_CLIENT_IDS` пуст → `/auth/google` отдаёт 503, кнопка Google в приложении
+скрыта. Apple Sign-In работает независимо.
+
+### Прочее
+- Team ID `9X62NWF857` — в `ios/Ridge/Config/Local.xcconfig.example` (не секрет,
+  виден в любой подписанной сборке).
+- Бэкапы `.env.prod` перед правками: `backend/.env.prod.bak-*`.
