@@ -176,6 +176,7 @@ def settings_kb(s: dict) -> InlineKeyboardMarkup:
     b.button(text=f"🌙 Вечер: {_hhmm(s['evening'])}", callback_data="set_time:evening")
     b.button(text=f"🌍 Часовой пояс: {s['timezone']}", callback_data="set_tz")
     b.button(text=f"{LANGUAGE_LABELS.get(s.get('language', 'ru'), '🌐 Язык')}", callback_data="set_lang_menu")
+    b.button(text="🔗 Привязать приложение", callback_data="link_code")
     b.adjust(1)
     return b.as_markup()
 
