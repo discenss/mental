@@ -53,7 +53,7 @@ struct MeView: View {
                     Text(active.name)
                         .font(t.font.bodyEmphasized)
                         .foregroundStyle(t.ink)
-                    Text("today.weekDay \(active.week) \(active.day)")
+                    Text(L10n("today.weekDay").format(active.week, active.day))
                         .font(t.font.caption)
                         .foregroundStyle(t.inkMuted)
                 }

@@ -533,9 +533,10 @@ struct IntakeResult: Codable, Sendable {
     let text: String?
 
     enum CodingKeys: String, CodingKey {
-        case leading, focus1, focus2, text
+        case leading, focus1, focus2
         case isSoft = "is_soft"
-        case recommendedModule = "recommended_module"
+        case recommendedModule = "leading_module"
+        case text = "result_text"
     }
 }
 

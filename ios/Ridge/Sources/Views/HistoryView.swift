@@ -262,7 +262,7 @@ struct JournalEntryCard: View {
 
                 // у заметок и финального продукта week/day = null
                 if let week = entry.week, let day = entry.day {
-                    Text("today.weekDay \(week) \(day)")
+                    Text(L10n("today.weekDay").format(week, day))
                         .font(t.font.labelS)
                         .foregroundStyle(t.inkDim)
                 }

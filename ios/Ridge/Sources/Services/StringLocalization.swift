@@ -18,8 +18,11 @@ struct L10n: Hashable, Sendable, ExpressibleByStringLiteral, ExpressibleByString
     init(stringLiteral value: String) { self.key = value }
 
     /// Локализованная строка.
+    ///
+    /// `String(localized:)`, а не `NSLocalizedString` — последний ненадёжно резолвит
+    /// записи String Catalog (наблюдался возврат сырого ключа при валидном переводе).
     var text: String {
-        NSLocalizedString(key, bundle: .main, comment: "")
+        String(localized: String.LocalizationValue(key), bundle: .main)
     }
 
     /// Ключ для SwiftUI-вью.

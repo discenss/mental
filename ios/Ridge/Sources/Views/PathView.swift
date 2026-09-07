@@ -60,7 +60,7 @@ struct PathView: View {
                 Text("\(status.daysCompleted)")
                     .font(t.font.numericL)
                     .foregroundStyle(t.terracotta)
-                Text("path.progress \(status.daysCompleted) \(status.daysTotal)")
+                Text(L10n("path.progress").format(status.daysCompleted, status.daysTotal))
                     .font(t.font.caption)
                     .foregroundStyle(t.inkMuted)
             }
@@ -71,7 +71,7 @@ struct PathView: View {
                 .tint(t.terracotta)
 
             if status.status == .active || status.status == .selfcheckDue {
-                Text("today.weekDay \(status.week) \(status.day)")
+                Text(L10n("today.weekDay").format(status.week, status.day))
                     .font(t.font.caption)
                     .foregroundStyle(t.inkDim)
             }
@@ -98,7 +98,7 @@ struct PathView: View {
                             .foregroundStyle(t.inkDim)
                     }
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(Text("path.week \(week)"))
+                    .accessibilityLabel(Text(L10n("path.week").format(week)))
                     .accessibilityValue(zone.map { Text(L10n($0.titleKey)) }
                                         ?? Text("a11y.notSelected"))
                 }

@@ -135,7 +135,7 @@ struct ProgressDashes: View {
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("a11y.progress \(current) \(total)"))
+        .accessibilityLabel(Text(L10n("a11y.progress").format(current, total)))
     }
 }
 

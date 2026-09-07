@@ -61,7 +61,7 @@ struct OnboardingView: View {
                 .padding(.horizontal, t.spacing.xl)
 
             if vm.step == .intake, !vm.questions.isEmpty {
-                Text("onboarding.intake.progress \(vm.questionIndex + 1) \(vm.questions.count)")
+                Text(L10n("onboarding.intake.progress").format(vm.questionIndex + 1, vm.questions.count))
                     .font(t.font.caption)
                     .foregroundStyle(t.inkDim)
             }
