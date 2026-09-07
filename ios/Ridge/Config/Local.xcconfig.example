@@ -1,5 +1,5 @@
-// Скопируйте в Local.xcconfig и впишите свой Team ID.
-// Local.xcconfig в .gitignore — личные идентификаторы не коммитим.
+// Скопируйте в Local.xcconfig — он в .gitignore и не коммитится.
 //
 // Team ID: developer.apple.com → Membership → Team ID (10 символов).
-RIDGE_TEAM_ID = ABCDE12345
+// Для этого проекта: 9X62NWF857
+RIDGE_TEAM_ID = 9X62NWF857
