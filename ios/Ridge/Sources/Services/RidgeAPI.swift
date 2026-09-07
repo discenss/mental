@@ -153,8 +153,10 @@ actor RidgeAPI: RidgeAPIProtocol {
             // В Rhythmos использовался `URLSession.shared` с дефолтами: запрос мог висеть
             // 60 секунд, и экран всё это время оставался в загрузке.
             let config = URLSessionConfiguration.default
-            config.timeoutIntervalForRequest = 15
-            config.timeoutIntervalForResource = 30
+            // 15+ секунд немого ожидания читаются как зависание; на вход и загрузку
+            // экрана этого более чем достаточно, а неудачу видно быстро.
+            config.timeoutIntervalForRequest = 12
+            config.timeoutIntervalForResource = 25
             config.waitsForConnectivity = false
             self.session = URLSession(configuration: config)
         }

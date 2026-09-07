@@ -34,22 +34,41 @@ struct AuthView: View {
                 Spacer()
 
                 VStack(spacing: t.spacing.m) {
+                    // Ошибка ВНЕ зоны спиннера: раньше `ProgressView` висел оверлеем
+                    // поверх всего стека, и сообщение о неудачном входе было не увидеть —
+                    // экран выглядел так, будто «ничего не произошло».
                     if let error = auth.errorMessage {
                         ErrorBanner(error: .server(status: 0, message: error))
+                            .transition(.opacity)
                     }
 
-                    SignInWithAppleButton(.signIn) { request in
-                        request.requestedScopes = [.email]
-                    } onCompletion: { result in
-                        Task { await auth.handleAppleCompletion(result) }
-                    }
-                    .signInWithAppleButtonStyle(scheme == .dark ? .white : .black)
-                    .frame(height: 48)
-                    .clipShape(RoundedRectangle(cornerRadius: t.corners.button))
+                    ZStack {
+                        VStack(spacing: t.spacing.m) {
+                            SignInWithAppleButton(.signIn) { request in
+                                request.requestedScopes = [.email]
+                            } onCompletion: { result in
+                                Task { await auth.handleAppleCompletion(result) }
+                            }
+                            .signInWithAppleButtonStyle(scheme == .dark ? .white : .black)
+                            .frame(height: 48)
+                            .clipShape(RoundedRectangle(cornerRadius: t.corners.button))
 
-                    if GoogleSignInBridge.isConfigured {
-                        GhostButton(title: "auth.google", icon: "globe") {
-                            Task { await signInWithGoogle() }
+                            if GoogleSignInBridge.isConfigured {
+                                GhostButton(title: "auth.google", icon: "globe") {
+                                    Task { await signInWithGoogle() }
+                                }
+                            }
+                        }
+                        // Системная `SignInWithAppleButton` не реагирует на наш `isBusy`
+                        // и во время запроса выглядит просто бледной. Поэтому гасим стек
+                        // сами и показываем поверх спиннер — видно, что идёт работа.
+                        .opacity(auth.isBusy ? 0.35 : 1)
+                        .allowsHitTesting(!auth.isBusy)
+
+                        if auth.isBusy {
+                            ProgressView()
+                                .tint(t.terracotta)
+                                .accessibilityLabel(Text("common.loading"))
                         }
                     }
 
@@ -62,14 +81,12 @@ struct AuthView: View {
                             .underline()
                     }
                     .padding(.top, t.spacing.s)
+                    .disabled(auth.isBusy)
                 }
                 .padding(.horizontal, t.spacing.xl)
                 .padding(.bottom, t.spacing.xxl)
-                .overlay {
-                    if auth.isBusy {
-                        ProgressView().tint(t.terracotta)
-                    }
-                }
+                .animation(.easeInOut(duration: 0.2), value: auth.errorMessage)
+                .animation(.easeInOut(duration: 0.2), value: auth.isBusy)
             }
         }
         .sheet(isPresented: $showLinkSheet) {

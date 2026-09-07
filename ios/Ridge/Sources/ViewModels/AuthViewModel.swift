@@ -125,8 +125,16 @@ final class AuthViewModel: ObservableObject {
             state = completedOnboarding ? .ready : .needsOnboarding
         } catch let error as APIError {
             errorMessage = error.errorDescription
+            #if DEBUG
+            // «Ничего не происходит» почти всегда означает недоступный бэкенд.
+            // Печатаем адрес, чтобы это было видно в консоли Xcode сразу.
+            print("[Ridge] вход не удался: \(error) | базовый адрес: \(RidgeAPI.shared.baseURL)")
+            #endif
         } catch {
             errorMessage = error.localizedDescription
+            #if DEBUG
+            print("[Ridge] вход не удался: \(error) | базовый адрес: \(RidgeAPI.shared.baseURL)")
+            #endif
         }
     }
 
