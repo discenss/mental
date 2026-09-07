@@ -19,3 +19,12 @@ backups/
 !.env.example
 !**/.env.prod.example
 cred.txt
+
+# iOS: генерируемые артефакты и личные идентификаторы
+ios/**/*.xcodeproj/
+ios/**/*.xcworkspace/
+ios/**/Config/Local.xcconfig
+ios/**/.build/
+ios/**/DerivedData/
+*.xcuserstate
+xcuserdata/

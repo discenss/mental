@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app import models as m
 
-SUPPORTED_LANGUAGES = ["ru", "en", "uk", "es", "de"]
+SUPPORTED_LANGUAGES = ["ru", "en", "uk", "es", "de", "pt"]
 DEFAULT_LANGUAGE = "ru"
 
 

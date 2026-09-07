@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import models as m
-from app.services import scoring, i18n
+from app.services import scoring, i18n, clock
 
 
 def _current_entry(db: Session, enrollment: m.Enrollment):
@@ -30,6 +30,19 @@ def _closed_today(db: Session, enrollment_id: int, day: _date) -> bool:
                                       m.DailyEntry.entry_date == day,
                                       m.DailyEntry.evening_done.is_(True)).limit(1)
     ).scalar_one_or_none() is not None
+
+
+def closed_today(db: Session, enrollment: m.Enrollment, *, day: _date | None = None) -> bool:
+    """Закрывал ли пользователь день в свою СЕГОДНЯШНЮЮ дату.
+
+    Движок остаётся time-agnostic (§7.1): сам он ничего не гейтит, продвижение
+    определяется только вызовами. Этот предикат — для клиентского слоя (API/бот),
+    который решает, пускать ли закрытие дня ещё раз. Тест-режим гейт не касается:
+    он специально проматывает много дней за одни сутки.
+    """
+    if enrollment.mode == "test":
+        return False
+    return _closed_today(db, enrollment.id, day or clock.today_for(enrollment.user))
 
 
 def enroll(db: Session, user_id: int, module_code: str, *, mode: str = "normal") -> m.Enrollment:
@@ -97,6 +110,8 @@ def get_markers(db: Session, enrollment: m.Enrollment, *,
 
 
 def get_today(db: Session, enrollment: m.Enrollment, *, today: _date | None = None) -> dict:
+    # дата гейта — локальная дата ПОЛЬЗОВАТЕЛЯ, не серверного процесса (см. services/clock)
+    today = today or clock.today_for(enrollment.user)
     if enrollment.status == "completed":
         return {"status": "completed"}
     if enrollment.status == "selfcheck_due":
@@ -228,7 +243,7 @@ def open_day(db: Session, enrollment: m.Enrollment, *,
         raise ValueError(f"нельзя открыть день в статусе {enrollment.status}")
     entry, w, d = _get_or_create_entry(db, enrollment)
     entry.morning_done = True
-    entry.entry_date = entry_date or _date.today()
+    entry.entry_date = entry_date or clock.today_for(enrollment.user)
     db.commit()
     return {"session": "evening", "week": w, "day": d}
 
@@ -239,9 +254,14 @@ def close_day(db: Session, enrollment: m.Enrollment, *, task_status=None, task_a
     → продвижение. Маркеры — раз в неделю, см. submit_selfcheck."""
     if enrollment.status != "active":
         raise ValueError(f"нельзя закрыть день в статусе {enrollment.status}")
+    # Защита от двойного вызова: close_day ПРОДВИГАЕТ день, поэтому повторный запрос
+    # (двойной тап, ретрай на плохой сети) иначе промотал бы ДВА дня. Проверять
+    # `entry.evening_done` текущего дня недостаточно: после продвижения текущим стал
+    # уже следующий, чистый день. Смотрим на календарный факт — закрывали ли день
+    # сегодня (в локальной дате пользователя); это тот же гейт, что у `done_today`.
     entry, w, d = _get_or_create_entry(db, enrollment)
     if entry.entry_date is None:
-        entry.entry_date = entry_date or _date.today()
+        entry.entry_date = entry_date or clock.today_for(enrollment.user)
     entry.morning_done = True
     entry.task_status = task_status
     entry.task_answer = task_answer
@@ -266,7 +286,7 @@ def complete_day(db: Session, enrollment: m.Enrollment, *, task_status=None,
     entry.task_answer = task_answer
     entry.quiz_answer = quiz_answer
     entry.reflection_answers = reflection or []
-    entry.entry_date = entry_date or _date.today()
+    entry.entry_date = entry_date or clock.today_for(enrollment.user)
     entry.morning_done = True
     entry.evening_done = True
     _sync_journal(db, enrollment, w, d, reflection or [], task_answer=task_answer)

@@ -1,0 +1,83 @@
+# Описание проекта для XcodeGen (https://github.com/yonaskolb/XcodeGen).
+#
+# .xcodeproj в репозитории НЕТ намеренно: это генерируемый артефакт, который
+# порождает конфликты слияния при каждой правке и прячет настройки в UI Xcode.
+# Здесь всё явно, а Team ID и bundle id — в Config/*.xcconfig (см. Config/README).
+#
+#   brew install xcodegen && xcodegen generate && open Ridge.xcodeproj
+
+name: Ridge
+options:
+  bundleIdPrefix: day.ridge
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: false
+
+configs:
+  Debug: debug
+  Beta: release
+  Release: release
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+
+configFiles:
+  Debug: Config/Debug.xcconfig
+  Beta: Config/Beta.xcconfig
+  Release: Config/Release.xcconfig
+
+targets:
+  Ridge:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+      - path: Resources
+    info:
+      path: Resources/Info.plist
+      properties:
+        CFBundleDisplayName: Ridge
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        # Базовый адрес API и режим APNs приезжают из xcconfig — код читает их
+        # из Info.plist, чтобы не хардкодить окружение в исходниках.
+        RIDGE_API_BASE_URL: $(RIDGE_API_BASE_URL)
+        RIDGE_APNS_SANDBOX: $(RIDGE_APNS_SANDBOX)
+        NSMicrophoneUsageDescription: Микрофон нужен, чтобы надиктовывать ответы вместо набора текста.
+        NSSpeechRecognitionUsageDescription: Распознавание речи превращает надиктованный ответ в текст.
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        # Файл entitlements лежит в Resources и НЕ генерируется: aps-environment
+        # должен отличаться по конфигурациям, а XcodeGen этого не умеет.
+        CODE_SIGN_ENTITLEMENTS: Resources/Ridge.entitlements
+
+  RidgeTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: Ridge
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: true
+
+schemes:
+  Ridge:
+    build:
+      targets:
+        Ridge: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - RidgeTests
+    archive:
+      config: Release

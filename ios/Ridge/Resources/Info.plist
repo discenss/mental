@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>Ridge</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<!-- Окружение приезжает из Config/*.xcconfig, а не хардкодится в коде -->
+	<key>RIDGE_API_BASE_URL</key>
+	<string>$(RIDGE_API_BASE_URL)</string>
+	<key>RIDGE_APNS_SANDBOX</key>
+	<string>$(RIDGE_APNS_SANDBOX)</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Микрофон нужен, чтобы надиктовывать ответы вместо набора текста.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Распознавание речи превращает надиктованный ответ в текст.</string>
+	<key>UILaunchScreen</key>
+	<dict/>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+</dict>
+</plist>

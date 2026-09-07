@@ -1,0 +1,14 @@
+#include "Shared.xcconfig"
+
+PRODUCT_BUNDLE_IDENTIFIER = day.ridge.app.dev
+PRODUCT_NAME = Ridge Dev
+
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG
+SWIFT_OPTIMIZATION_LEVEL = -Onone
+GCC_OPTIMIZATION_LEVEL = 0
+ONLY_ACTIVE_ARCH = YES
+
+// Локальный бэкенд по умолчанию (см. RUNBOOK: uvicorn на 8000).
+// Симулятор ходит на localhost хоста; на устройстве замените на IP машины.
+RIDGE_API_BASE_URL = http:/$()/127.0.0.1:8000
+RIDGE_APNS_SANDBOX = YES

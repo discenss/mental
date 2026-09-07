@@ -1,0 +1,10 @@
+#include "Shared.xcconfig"
+
+PRODUCT_BUNDLE_IDENTIFIER = day.ridge.app
+PRODUCT_NAME = Ridge
+
+SWIFT_OPTIMIZATION_LEVEL = -O
+VALIDATE_PRODUCT = YES
+
+RIDGE_API_BASE_URL = https:/$()/mental.rhythmos.online
+RIDGE_APNS_SANDBOX = NO
