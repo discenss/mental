@@ -1,0 +1,30 @@
+// Общие настройки сборки Ridge. Team ID здесь НЕТ — он в Local.xcconfig (gitignored),
+// чтобы личный идентификатор разработчика не попадал в репозиторий.
+#include? "Local.xcconfig"
+
+PRODUCT_NAME = $(TARGET_NAME)
+CURRENT_PROJECT_VERSION = 1
+MARKETING_VERSION = 0.1.0
+
+IPHONEOS_DEPLOYMENT_TARGET = 17.0
+TARGETED_DEVICE_FAMILY = 1,2
+SWIFT_VERSION = 5.0
+
+// Строгий конкурентный доступ: приложение целиком на @MainActor-VM + async/await
+SWIFT_STRICT_CONCURRENCY = complete
+
+CODE_SIGN_STYLE = Automatic
+DEVELOPMENT_TEAM = $(RIDGE_TEAM_ID)
+
+ENABLE_USER_SCRIPT_SANDBOXING = YES
+GENERATE_INFOPLIST_FILE = YES
+INFOPLIST_KEY_UILaunchScreen_Generation = YES
+INFOPLIST_KEY_CFBundleDisplayName = Ridge
+INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait
+
+// Голосовой ввод в рефлексии + микрофон
+INFOPLIST_KEY_NSMicrophoneUsageDescription = Микрофон нужен, чтобы надиктовывать ответы вместо набора текста.
+INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = Распознавание речи превращает надиктованный ответ в текст.
+
+ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon
+ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = Terracotta

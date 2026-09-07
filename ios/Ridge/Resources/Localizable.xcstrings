@@ -1,0 +1,1697 @@
+{
+  "sourceLanguage": "ru",
+  "version": "1.0",
+  "strings": {
+    "a11y.answerScale": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вариант ответа"
+          }
+        }
+      }
+    },
+    "a11y.notSelected": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "не выбрано"
+          }
+        }
+      }
+    },
+    "a11y.pauseAudio": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пауза"
+          }
+        }
+      }
+    },
+    "a11y.playAudio": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Воспроизвести аудио"
+          }
+        }
+      }
+    },
+    "a11y.progress %lld %lld": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Прогресс: шаг %1$lld из %2$lld"
+          }
+        }
+      }
+    },
+    "a11y.selected": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "выбрано"
+          }
+        }
+      }
+    },
+    "ai.disabled": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ответы ИИ сейчас недоступны."
+          }
+        }
+      }
+    },
+    "ai.hint": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Это поддержка, а не консультация специалиста."
+          }
+        }
+      }
+    },
+    "ai.placeholder": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "О чём хотите спросить?"
+          }
+        }
+      }
+    },
+    "ai.send": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Спросить"
+          }
+        }
+      }
+    },
+    "ai.title": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Спросить ИИ"
+          }
+        }
+      }
+    },
+    "app.name": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ridge"
+          }
+        }
+      }
+    },
+    "auth.google": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Войти через Google"
+          }
+        }
+      }
+    },
+    "auth.linkHint": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отправьте /link боту в Telegram — он пришлёт шестизначный код. Прогресс объединится в один аккаунт."
+          }
+        }
+      }
+    },
+    "auth.linkPlaceholder": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "000000"
+          }
+        }
+      }
+    },
+    "auth.linkSubmit": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Связать аккаунты"
+          }
+        }
+      }
+    },
+    "auth.linkSuccess": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Аккаунты связаны. Ваш прогресс из Telegram теперь здесь."
+          }
+        }
+      }
+    },
+    "auth.linkTelegram": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "У меня есть код из Telegram"
+          }
+        }
+      }
+    },
+    "auth.linkTitle": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Код связи"
+          }
+        }
+      }
+    },
+    "auth.subtitle": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Чтобы прогресс сохранялся и был доступен на других устройствах."
+          }
+        }
+      }
+    },
+    "auth.title": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вход"
+          }
+        }
+      }
+    },
+    "common.back": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Назад"
+          }
+        }
+      }
+    },
+    "common.cancel": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отмена"
+          }
+        }
+      }
+    },
+    "common.close": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Закрыть"
+          }
+        }
+      }
+    },
+    "common.continue": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Продолжить"
+          }
+        }
+      }
+    },
+    "common.done": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Готово"
+          }
+        }
+      }
+    },
+    "common.loading": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Загрузка…"
+          }
+        }
+      }
+    },
+    "common.next": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Дальше"
+          }
+        }
+      }
+    },
+    "common.retry": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Повторить"
+          }
+        }
+      }
+    },
+    "common.save": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сохранить"
+          }
+        }
+      }
+    },
+    "common.skip": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пропустить"
+          }
+        }
+      }
+    },
+    "common.soon": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "скоро"
+          }
+        }
+      }
+    },
+    "direction.anx": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Тревога"
+          }
+        }
+      }
+    },
+    "direction.bound": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Личные границы"
+          }
+        }
+      }
+    },
+    "direction.burn": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выгорание"
+          }
+        }
+      }
+    },
+    "direction.emo": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Эмоции"
+          }
+        }
+      }
+    },
+    "direction.focus": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Фокус и прокрастинация"
+          }
+        }
+      }
+    },
+    "direction.past": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Прошлый опыт"
+          }
+        }
+      }
+    },
+    "direction.proc": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Процессы и паттерны"
+          }
+        }
+      }
+    },
+    "direction.real": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Поиск себя и смысл"
+          }
+        }
+      }
+    },
+    "direction.rel": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отношения"
+          }
+        }
+      }
+    },
+    "direction.self": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Самооценка"
+          }
+        }
+      }
+    },
+    "error.badResponse": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Неожиданный ответ сервера."
+          }
+        }
+      }
+    },
+    "error.decoding": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Неожиданный ответ сервера."
+          }
+        }
+      }
+    },
+    "error.forbidden": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет доступа."
+          }
+        }
+      }
+    },
+    "error.invalidState": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Этот шаг сейчас недоступен. Обновите экран."
+          }
+        }
+      }
+    },
+    "error.invalidURL": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Неверный адрес сервера."
+          }
+        }
+      }
+    },
+    "error.notFound": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не найдено."
+          }
+        }
+      }
+    },
+    "error.offline": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет связи. Проверьте интернет — прогресс сохранён."
+          }
+        }
+      }
+    },
+    "error.server": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Что-то пошло не так на сервере."
+          }
+        }
+      }
+    },
+    "error.timedOut": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сервер долго не отвечает. Попробуйте ещё раз."
+          }
+        }
+      }
+    },
+    "error.unauthorized": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нужно войти заново."
+          }
+        }
+      }
+    },
+    "history.allEntries": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Все записи"
+          }
+        }
+      }
+    },
+    "history.empty": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Здесь появятся ваши записи"
+          }
+        }
+      }
+    },
+    "history.emptyBody": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ответы на задания, рефлексии и заметки сохраняются в дневник."
+          }
+        }
+      }
+    },
+    "history.emptyDay": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "В этот день записей нет"
+          }
+        }
+      }
+    },
+    "history.goToday": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перейти к сегодняшнему дню"
+          }
+        }
+      }
+    },
+    "history.title": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "История"
+          }
+        }
+      }
+    },
+    "journal.notePlaceholder": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "О чём хотите написать?"
+          }
+        }
+      }
+    },
+    "journal.noteTitle": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Заметка"
+          }
+        }
+      }
+    },
+    "journal.type.finalProduct": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Достижение"
+          }
+        }
+      }
+    },
+    "journal.type.note": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Заметка"
+          }
+        }
+      }
+    },
+    "journal.type.reflection": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Рефлексия"
+          }
+        }
+      }
+    },
+    "journal.type.task": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Задание"
+          }
+        }
+      }
+    },
+    "me.about": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "О приложении"
+          }
+        }
+      }
+    },
+    "me.account": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Аккаунт"
+          }
+        }
+      }
+    },
+    "me.changeRoute": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сменить маршрут"
+          }
+        }
+      }
+    },
+    "me.changeRouteWarning": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Текущий маршрут будет прекращён, а его записи удалены. Пройденные маршруты останутся."
+          }
+        }
+      }
+    },
+    "me.currentRoute": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Текущий маршрут"
+          }
+        }
+      }
+    },
+    "me.disclaimer": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Мы не ставим диагнозов и не заменяем работу с психологом."
+          }
+        }
+      }
+    },
+    "me.language": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Язык"
+          }
+        }
+      }
+    },
+    "me.linkedChannels": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Связанные каналы"
+          }
+        }
+      }
+    },
+    "me.reminders": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Напоминания"
+          }
+        }
+      }
+    },
+    "me.signOut": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выйти"
+          }
+        }
+      }
+    },
+    "me.title": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Я"
+          }
+        }
+      }
+    },
+    "modules.forWhom": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Для кого этот маршрут"
+          }
+        }
+      }
+    },
+    "modules.important": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Важно"
+          }
+        }
+      }
+    },
+    "modules.start": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Начать маршрут"
+          }
+        }
+      }
+    },
+    "modules.subtitle": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Шесть недель, один день за раз."
+          }
+        }
+      }
+    },
+    "modules.title": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Маршруты"
+          }
+        }
+      }
+    },
+    "modules.whatYouGet": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Что вы получите"
+          }
+        }
+      }
+    },
+    "onboarding.intake.progress %lld %lld": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вопрос %1$lld из %2$lld"
+          }
+        }
+      }
+    },
+    "onboarding.intro.fallback": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Это 30 коротких вопросов. Здесь нет правильных ответов — отвечайте, ориентируясь на последние две-четыре недели. Результат не является диагнозом."
+          }
+        }
+      }
+    },
+    "onboarding.intro.title": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подбор маршрута"
+          }
+        }
+      }
+    },
+    "onboarding.language.subtitle": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Другие языки появятся позже."
+          }
+        }
+      }
+    },
+    "onboarding.language.title": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Язык / Language"
+          }
+        }
+      }
+    },
+    "onboarding.reminders.afternoon": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "День"
+          }
+        }
+      }
+    },
+    "onboarding.reminders.evening": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вечер"
+          }
+        }
+      }
+    },
+    "onboarding.reminders.morning": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Утро"
+          }
+        }
+      }
+    },
+    "onboarding.reminders.subtitle": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Мягкое напоминание вернуться к маршруту. Время можно изменить в любой момент."
+          }
+        }
+      }
+    },
+    "onboarding.reminders.title": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Напоминания"
+          }
+        }
+      }
+    },
+    "onboarding.result.choice": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выбор всегда за вами — можно начать с другого маршрута."
+          }
+        }
+      }
+    },
+    "onboarding.result.other": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Посмотреть другие маршруты"
+          }
+        }
+      }
+    },
+    "onboarding.result.start": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Начать этот маршрут"
+          }
+        }
+      }
+    },
+    "onboarding.result.title": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ваш результат"
+          }
+        }
+      }
+    },
+    "onboarding.skip": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выбрать маршрут самому"
+          }
+        }
+      }
+    },
+    "path.achievements": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Личные итоги"
+          }
+        }
+      }
+    },
+    "path.empty": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Путь ещё не начат"
+          }
+        }
+      }
+    },
+    "path.emptyBody": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выберите маршрут — и здесь появится карта пройденного."
+          }
+        }
+      }
+    },
+    "path.insightDisabled": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Разбор пока недоступен."
+          }
+        }
+      }
+    },
+    "path.insightLoad": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показать разбор"
+          }
+        }
+      }
+    },
+    "path.programInsight": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Итог маршрута"
+          }
+        }
+      }
+    },
+    "path.progress %lld %lld": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld из %2$lld дней"
+          }
+        }
+      }
+    },
+    "path.title": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пройденный путь"
+          }
+        }
+      }
+    },
+    "path.week %lld": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Неделя %lld"
+          }
+        }
+      }
+    },
+    "path.weekInsight": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Разбор недели"
+          }
+        }
+      }
+    },
+    "path.weeks": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Недели"
+          }
+        }
+      }
+    },
+    "selfcheck.continueNext": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перейти к следующей неделе"
+          }
+        }
+      }
+    },
+    "selfcheck.markersEvening": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Как складывались дни"
+          }
+        }
+      }
+    },
+    "selfcheck.markersIntro": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сначала несколько вопросов о том, как прошла неделя."
+          }
+        }
+      }
+    },
+    "selfcheck.markersMorning": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Состояние на входе в день"
+          }
+        }
+      }
+    },
+    "selfcheck.questions": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Итоги недели"
+          }
+        }
+      }
+    },
+    "selfcheck.recommendation": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Рекомендация"
+          }
+        }
+      }
+    },
+    "selfcheck.resultTitle": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Итоги недели"
+          }
+        }
+      }
+    },
+    "selfcheck.submit": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подвести итоги"
+          }
+        }
+      }
+    },
+    "selfcheck.title": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Самопроверка"
+          }
+        }
+      }
+    },
+    "tab.history": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "История"
+          }
+        }
+      }
+    },
+    "tab.me": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Я"
+          }
+        }
+      }
+    },
+    "tab.path": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Путь"
+          }
+        }
+      }
+    },
+    "tab.today": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сегодня"
+          }
+        }
+      }
+    },
+    "task.status.done": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сделано"
+          }
+        }
+      }
+    },
+    "task.status.notDone": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не сделано"
+          }
+        }
+      }
+    },
+    "task.status.partial": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Частично"
+          }
+        }
+      }
+    },
+    "today.addNote": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Заметка в дневник"
+          }
+        }
+      }
+    },
+    "today.askAI": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Спросить ИИ"
+          }
+        }
+      }
+    },
+    "today.audio": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Аудио"
+          }
+        }
+      }
+    },
+    "today.chooseRoute": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выбрать маршрут"
+          }
+        }
+      }
+    },
+    "today.closeDay": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Закрыть день"
+          }
+        }
+      }
+    },
+    "today.comeBackTomorrow": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сегодняшний день уже пройден. Возвращайтесь завтра — маршрут идёт в вашем темпе."
+          }
+        }
+      }
+    },
+    "today.completed": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Маршрут пройден"
+          }
+        }
+      }
+    },
+    "today.completedBody": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Спасибо за эту работу с собой."
+          }
+        }
+      }
+    },
+    "today.dayDone": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "День завершён"
+          }
+        }
+      }
+    },
+    "today.dayDoneBody": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "На сегодня всё — спокойно возвращайтесь завтра, один день за раз."
+          }
+        }
+      }
+    },
+    "today.dayOpened": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "День открыт"
+          }
+        }
+      }
+    },
+    "today.dayOpenedBody": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Фокус и задание — выше. Занимайтесь днём в своём темпе, а вечером возвращайтесь закрыть день."
+          }
+        }
+      }
+    },
+    "today.focus": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Фокус дня"
+          }
+        }
+      }
+    },
+    "today.greeting.day": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добрый день"
+          }
+        }
+      }
+    },
+    "today.greeting.evening": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добрый вечер"
+          }
+        }
+      }
+    },
+    "today.greeting.morning": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Доброе утро"
+          }
+        }
+      }
+    },
+    "today.greeting.night": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Доброй ночи"
+          }
+        }
+      }
+    },
+    "today.intent": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Настройка на день"
+          }
+        }
+      }
+    },
+    "today.keyThemes": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ключевые темы"
+          }
+        }
+      }
+    },
+    "today.noRoute": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Маршрут ещё не выбран"
+          }
+        }
+      }
+    },
+    "today.noRouteBody": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выберите, с чего начать — или пройдите короткий подбор."
+          }
+        }
+      }
+    },
+    "today.openDay": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Открыть день"
+          }
+        }
+      }
+    },
+    "today.quiz": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вопрос"
+          }
+        }
+      }
+    },
+    "today.reflection": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Рефлексия"
+          }
+        }
+      }
+    },
+    "today.reflectionPlaceholder": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Можно коротко — или пропустить"
+          }
+        }
+      }
+    },
+    "today.selfcheckDue": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Неделя %lld пройдена"
+          }
+        }
+      }
+    },
+    "today.selfcheckDue %lld": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Неделя %lld пройдена"
+          }
+        }
+      }
+    },
+    "today.selfcheckDueBody": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пора подвести итоги недели."
+          }
+        }
+      }
+    },
+    "today.selfcheckStart": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пройти самопроверку"
+          }
+        }
+      }
+    },
+    "today.step": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Шаг %1$d из %2$d"
+          }
+        }
+      }
+    },
+    "today.task": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Задание дня"
+          }
+        }
+      }
+    },
+    "today.taskQuestion": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Как прошло сегодня?"
+          }
+        }
+      }
+    },
+    "today.voiceInput": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Надиктовать"
+          }
+        }
+      }
+    },
+    "today.voiceStop": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Остановить"
+          }
+        }
+      }
+    },
+    "today.weekDay": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Неделя %1$lld · День %2$lld"
+          }
+        }
+      }
+    },
+    "today.weekDay %lld %lld": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Неделя %1$lld · День %2$lld"
+          }
+        }
+      }
+    },
+    "today.weekGoal": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Цель недели"
+          }
+        }
+      }
+    },
+    "today.weekIntro": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Новая неделя"
+          }
+        }
+      }
+    },
+    "today.weekResult": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "К концу недели"
+          }
+        }
+      }
+    },
+    "welcome.disclaimer": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Мы не ставим диагнозов и не заменяем работу с психологом — а помогаем мягко и постепенно разобраться с собой."
+          }
+        }
+      }
+    },
+    "welcome.start": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Начать"
+          }
+        }
+      }
+    },
+    "welcome.subtitle": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Шаг за шагом, в вашем темпе. Один день за раз."
+          }
+        }
+      }
+    },
+    "welcome.title": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Спокойные шесть недель работы с собой"
+          }
+        }
+      }
+    },
+    "zone.green": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Зелёная зона"
+          }
+        }
+      }
+    },
+    "zone.red": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Красная зона"
+          }
+        }
+      }
+    },
+    "zone.yellow": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Жёлтая зона"
+          }
+        }
+      }
+    }
+  }
+}
