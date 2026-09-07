@@ -10,7 +10,8 @@ from sqlalchemy.orm import Session
 
 from app import models as m
 
-PROVIDERS = {"telegram", "ios", "whatsapp"}
+# "ios" = Apple Sign-In (sub из identity token), "google" = Google Sign-In.
+PROVIDERS = {"telegram", "ios", "whatsapp", "google"}
 
 
 def get_by_provider(db: Session, provider: str, provider_user_id: str | int) -> m.User | None:

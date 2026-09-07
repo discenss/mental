@@ -37,6 +37,54 @@ class Settings(BaseSettings):
     llm_timeout: float = 30.0
     llm_max_retries: int = 2
 
+    # ── Авторизация iOS-клиента (§3.1 RIDGE-IOS-PROMPT) ────────────────────────
+    # Бот НЕ затронут: он продолжает ходить в API телом запроса без токена.
+    # Здесь только то, что нужно публичному мобильному клиенту.
+    jwt_secret: str = ""                               # HS256; пусто → /auth/* отдаёт 503
+    jwt_algorithm: str = "HS256"
+    jwt_ttl_days: int = 90                             # мобильная сессия живёт долго
+
+    # Apple Sign-In: audience = bundle id приложения. Ключи Apple тянем из их JWKS.
+    apple_bundle_ids: str = ""                         # csv: day.ridge.app,day.ridge.app.dev
+    apple_jwks_url: str = "https://appleid.apple.com/auth/keys"
+    apple_issuer: str = "https://appleid.apple.com"
+
+    # Google Sign-In: допустимые audience (iOS client id, при желании — web client id).
+    google_client_ids: str = ""                        # csv
+    google_jwks_url: str = "https://www.googleapis.com/oauth2/v3/certs"
+    google_issuers: str = "https://accounts.google.com,accounts.google.com"
+
+    # Сервисный токен для внутренних вызовов (планировщик и т.п.). Пока пусто —
+    # поведение как раньше (бот ходит без токена). Заполнение включает проверку.
+    internal_api_token: str = ""
+
+    # ── APNs (пуши для iOS; у бота свои напоминания через Telegram) ────────────
+    apns_key_path: str = ""                            # путь к .p8; пусто → отправка no-op
+    apns_key_id: str = ""
+    apns_team_id: str = ""
+    apns_topic: str = "day.ridge.app"                  # = bundle id
+    apns_use_sandbox: bool = True
+
+    @property
+    def apple_audiences(self) -> list[str]:
+        return [x.strip() for x in self.apple_bundle_ids.split(",") if x.strip()]
+
+    @property
+    def google_audiences(self) -> list[str]:
+        return [x.strip() for x in self.google_client_ids.split(",") if x.strip()]
+
+    @property
+    def google_allowed_issuers(self) -> list[str]:
+        return [x.strip() for x in self.google_issuers.split(",") if x.strip()]
+
+    @property
+    def auth_enabled(self) -> bool:
+        return bool(self.jwt_secret)
+
+    @property
+    def apns_enabled(self) -> bool:
+        return bool(self.apns_key_path and self.apns_key_id and self.apns_team_id)
+
     @property
     def llm_enabled(self) -> bool:
         key = self.openai_api_key if self.llm_provider == "openai" else self.anthropic_api_key

@@ -525,3 +525,38 @@ class IntakeResult(Base):
     focus2: Mapped[str | None] = mapped_column(String(16), nullable=True)
     is_soft: Mapped[bool] = mapped_column(Boolean, default=False)
     chosen_module_code: Mapped[str | None] = mapped_column(String(16), nullable=True)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# АВТОРИЗАЦИЯ МОБИЛЬНОГО КЛИЕНТА (§3.1 RIDGE-IOS-PROMPT)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class LinkCode(Base):
+    """6-значный код для склейки каналов: бот выдаёт, приложение предъявляет.
+
+    Нужен, чтобы человек в Telegram/WhatsApp и в iOS был ОДНИМ пользователем.
+    Код одноразовый и короткоживущий; выдаётся каналом, где личность уже известна.
+    """
+    __tablename__ = "link_codes"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    code: Mapped[str] = mapped_column(String(16), index=True)
+    provider: Mapped[str] = mapped_column(String(16))            # чей канал выдал код
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    used: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class DeviceToken(Base):
+    """APNs device token устройства. Один пользователь — много устройств."""
+    __tablename__ = "device_tokens"
+    __table_args__ = (UniqueConstraint("token"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    token: Mapped[str] = mapped_column(String(255))
+    platform: Mapped[str] = mapped_column(String(16), default="ios")
+    # sandbox-токены нельзя слать в prod-шлюз и наоборот — помним, откуда пришёл
+    sandbox: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    language: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

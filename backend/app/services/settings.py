@@ -13,9 +13,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import models as m
-from app.services import i18n
+from app.services import clock, i18n
 
-DEFAULT_TZ = "Europe/Riga"
+DEFAULT_TZ = clock.DEFAULT_TZ
 
 # слот → (атрибут часа, атрибут минуты, атрибут даты последней отправки)
 SLOTS = {
@@ -26,10 +26,8 @@ SLOTS = {
 
 
 def _tz(name: str | None) -> pytz.BaseTzInfo:
-    try:
-        return pytz.timezone(name or DEFAULT_TZ)
-    except Exception:
-        return pytz.timezone(DEFAULT_TZ)
+    """Единый резолвер таймзоны — тот же, что у дневного гейта (services/clock)."""
+    return clock.tz(name)
 
 
 def get_settings(db: Session, user_id: int) -> dict:
