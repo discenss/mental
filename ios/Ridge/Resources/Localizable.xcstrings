@@ -873,6 +873,16 @@
         }
       }
     },
+    "onboarding.intake.heading": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подбор маршрута"
+          }
+        }
+      }
+    },
     "onboarding.intake.progress": {
       "extractionState": "stale",
       "localizations": {
@@ -989,6 +999,7 @@
       }
     },
     "onboarding.result.comingSoon": {
+      "extractionState": "stale",
       "localizations": {
         "ru": {
           "stringUnit": {
