@@ -13,6 +13,13 @@ options:
     iOS: "17.0"
   createIntermediateGroups: true
   generateEmptyDirectories: false
+  # XcodeGen по умолчанию ставит en. У нас единственный реальный язык — ru
+  # (Localizable.xcstrings, sourceLanguage: ru). Несовпадение development region
+  # с фактическим языком контента приводило к тому, что Bundle.localizations
+  # содержал фантомный "en" (без en.lproj на диске) с более высоким приоритетом,
+  # чем ru — String(localized:)/NSLocalizedString упирались в этот пустой "en"
+  # и возвращали сырой ключ, хотя перевод в ru.lproj был.
+  developmentLanguage: ru
 
 configs:
   Debug: debug
