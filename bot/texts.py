@@ -133,6 +133,13 @@ def reminder_nudge(item: dict) -> str:
     return tpl.format(m=item.get("module_name", ""))
 
 
+def link_code_view(r: dict) -> str:
+    minutes = r["expires_in_seconds"] // 60
+    return (f"🔗 Код для приложения: <code>{r['code']}</code>\n\n"
+            "На экране входа в Ridge нажмите «У меня есть код из Telegram» и введите "
+            f"его — аккаунты объединятся, прогресс не потеряется. Код действует {minutes} минут.")
+
+
 def _date_disp(iso: str) -> str:
     """'2026-07-15T..' → '15.07.2026'."""
     d = (iso or "")[:10]

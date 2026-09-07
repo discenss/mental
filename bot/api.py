@@ -78,6 +78,11 @@ class API:
                              {"provider": PROVIDER, "provider_user_id": str(tg_id)})
         return r["enrollments"]
 
+    async def link_code(self, tg_id: int) -> dict:
+        """Код для привязки приложения: бот выдаёт, Ridge принимает (аккаунты сливаются)."""
+        return await self._post("/api/v1/auth/link-code",
+                                {"provider": PROVIDER, "provider_user_id": str(tg_id)})
+
     async def status(self, eid: int) -> dict:
         return await self._get(f"/api/v1/enrollments/{eid}/status")
 

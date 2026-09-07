@@ -105,3 +105,10 @@ async def cb_set_lang(cb: CallbackQuery, state: FSMContext):
     await api.update_settings(cb.from_user.id, language=code)
     await cb.answer(f"Готово: {LANGUAGE_LABELS.get(code, code)}")
     await _show(cb.message, cb.from_user.id)
+
+
+@router.callback_query(F.data == "link_code")
+async def cb_link_code(cb: CallbackQuery, state: FSMContext):
+    await cb.answer()
+    r = await api.link_code(cb.from_user.id)
+    await cb.message.answer(texts.link_code_view(r))
