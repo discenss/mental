@@ -60,6 +60,13 @@ final class OnboardingViewModel: ObservableObject {
         return modules.first { $0.code.uppercased() == code }
     }
 
+    /// Название ведущего направления, когда под него ещё нет готовой программы —
+    /// для заблокированной карточки «🔒 <тема> — скоро» (паритет с ботом).
+    var pendingLeadingDirectionName: String? {
+        guard recommendedModule == nil else { return nil }
+        return result?.leadingName
+    }
+
     // MARK: - Загрузка
 
     func loadIntake() {

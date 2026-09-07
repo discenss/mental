@@ -530,12 +530,15 @@ struct IntakeResult: Codable, Sendable {
     let focus2: String?
     let isSoft: Bool?
     let recommendedModule: String?
+    /// Имя направления (не модуля) — нужно для «🔒 <тема> — скоро», когда программы ещё нет.
+    let leadingName: String?
     let text: String?
 
     enum CodingKeys: String, CodingKey {
         case leading, focus1, focus2
         case isSoft = "is_soft"
         case recommendedModule = "leading_module"
+        case leadingName = "leading_name"
         case text = "result_text"
     }
 }

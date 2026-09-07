@@ -202,6 +202,11 @@ struct OnboardingView: View {
                 AccentButton(title: "onboarding.result.start", isLoading: vm.isLoading) {
                     Task { _ = await vm.enroll(in: module.code) }
                 }
+            } else if let name = vm.pendingLeadingDirectionName {
+                // Тема определена, но своей программы под неё пока нет — как у бота: видно
+                // название темы, кнопка неактивна, ниже всегда доступен выбор из готовых.
+                AccentButton(title: LocalizedStringKey(L10n("onboarding.result.comingSoon").format(name)),
+                             isDisabled: true) {}
             }
 
             // Право выбора нормативно: автоперехода быть не должно

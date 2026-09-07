@@ -50,6 +50,7 @@
       }
     },
     "a11y.progress": {
+      "extractionState": "stale",
       "localizations": {
         "ru": {
           "stringUnit": {
@@ -873,6 +874,7 @@
       }
     },
     "onboarding.intake.progress": {
+      "extractionState": "stale",
       "localizations": {
         "ru": {
           "stringUnit": {
@@ -986,6 +988,16 @@
         }
       }
     },
+    "onboarding.result.comingSoon": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🔒 %@ — скоро"
+          }
+        }
+      }
+    },
     "onboarding.result.other": {
       "extractionState": "stale",
       "localizations": {
@@ -1094,6 +1106,7 @@
       }
     },
     "path.progress": {
+      "extractionState": "stale",
       "localizations": {
         "ru": {
           "stringUnit": {
@@ -1114,6 +1127,7 @@
       }
     },
     "path.week": {
+      "extractionState": "stale",
       "localizations": {
         "ru": {
           "stringUnit": {
