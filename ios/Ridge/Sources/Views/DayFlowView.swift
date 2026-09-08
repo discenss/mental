@@ -154,8 +154,15 @@ struct DayFlowView: View {
             if vm.reflections.indices.contains(reflectionIndex) {
                 VoiceTextEditor(
                     text: Binding(
-                        get: { vm.reflections[reflectionIndex] },
-                        set: { vm.reflections[reflectionIndex] = $0 }
+                        // при закрытии дня vm.reflections обнуляется раньше, чем этот
+                        // View успевает исчезнуть — get/set могут получить вызов уже
+                        // после сброса массива, поэтому проверяем границы и здесь, а
+                        // не только в условии выше (это защищало только создание View).
+                        get: { vm.reflections.indices.contains(reflectionIndex) ? vm.reflections[reflectionIndex] : "" },
+                        set: { newValue in
+                            guard vm.reflections.indices.contains(reflectionIndex) else { return }
+                            vm.reflections[reflectionIndex] = newValue
+                        }
                     ),
                     placeholder: "today.reflectionPlaceholder")
             }
