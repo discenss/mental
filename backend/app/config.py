@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     jwt_ttl_days: int = 90                             # мобильная сессия живёт долго
 
     # Apple Sign-In: audience = bundle id приложения. Ключи Apple тянем из их JWKS.
-    apple_bundle_ids: str = ""                         # csv: day.ridge.app,day.ridge.app.dev
+    apple_bundle_ids: str = ""                         # csv: day.verge.app,day.verge.app.dev
     apple_jwks_url: str = "https://appleid.apple.com/auth/keys"
     apple_issuer: str = "https://appleid.apple.com"
 
@@ -62,7 +62,7 @@ class Settings(BaseSettings):
     apns_key_path: str = ""                            # путь к .p8; пусто → отправка no-op
     apns_key_id: str = ""
     apns_team_id: str = ""
-    apns_topic: str = "day.ridge.app"                  # = bundle id
+    apns_topic: str = "day.verge.app"                  # = bundle id
     apns_use_sandbox: bool = True
 
     @property

@@ -1,4 +1,4 @@
-# Ridge — iOS-клиент Mental
+# Verge — iOS-клиент Mental
 
 SwiftUI-приложение под iOS 17+, работающее против бэкенда Mental (`~/dev/mental/backend`).
 Скелет и визуальный язык унаследованы от Rhythmos; предметная логика — Mental.
@@ -10,11 +10,11 @@ SwiftUI-приложение под iOS 17+, работающее против �
 
 ```bash
 brew install xcodegen                 # .xcodeproj не в репозитории, он генерируется
-cd ios/Ridge
+cd ios/Verge
 cp Config/Local.xcconfig.example Config/Local.xcconfig
 $EDITOR Config/Local.xcconfig         # впишите свой Team ID
 xcodegen generate
-open Ridge.xcodeproj
+open Verge.xcodeproj
 ```
 
 Локальный бэкенд для Debug-сборки (адрес уже прописан в `Config/Debug.xcconfig`):

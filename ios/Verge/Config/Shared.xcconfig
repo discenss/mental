@@ -1,4 +1,4 @@
-// Общие настройки сборки Ridge. Team ID здесь НЕТ — он в Local.xcconfig (gitignored),
+// Общие настройки сборки Verge. Team ID здесь НЕТ — он в Local.xcconfig (gitignored),
 // чтобы личный идентификатор разработчика не попадал в репозиторий.
 #include? "Local.xcconfig"
 
@@ -19,7 +19,7 @@ DEVELOPMENT_TEAM = $(RIDGE_TEAM_ID)
 ENABLE_USER_SCRIPT_SANDBOXING = YES
 GENERATE_INFOPLIST_FILE = YES
 INFOPLIST_KEY_UILaunchScreen_Generation = YES
-INFOPLIST_KEY_CFBundleDisplayName = Ridge
+INFOPLIST_KEY_CFBundleDisplayName = Verge
 INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait
 
 // Голосовой ввод в рефлексии + микрофон
