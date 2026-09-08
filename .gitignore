@@ -28,3 +28,4 @@ ios/**/.build/
 ios/**/DerivedData/
 *.xcuserstate
 xcuserdata/
+.DS_Store
