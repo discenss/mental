@@ -1,0 +1,5 @@
+python-docx
+requests
+pydub
+numpy
+audioop-lts; python_version >= "3.13"
