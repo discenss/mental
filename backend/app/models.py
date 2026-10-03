@@ -34,6 +34,7 @@ class Module(Base):
     weeks: Mapped[list["ModuleWeek"]] = relationship(back_populates="module", cascade="all, delete-orphan")
     markers: Mapped[list["Marker"]] = relationship(cascade="all, delete-orphan")
     audio: Mapped[list["AudioAsset"]] = relationship(cascade="all, delete-orphan")
+    texts: Mapped[list["TextAsset"]] = relationship(cascade="all, delete-orphan")
     final_product: Mapped["FinalProductTemplate"] = relationship(cascade="all, delete-orphan", uselist=False)
     postmodule: Mapped["PostmoduleConfig"] = relationship(cascade="all, delete-orphan", uselist=False)
 
@@ -178,6 +179,41 @@ class AudioVariant(Base):
     channel_cache: Mapped[dict] = mapped_column(JSON, default=dict)
 
     audio_asset: Mapped["AudioAsset"] = relationship(back_populates="variants")
+
+
+class TextAsset(Base):
+    """Текстовая практика-«слот» программы — независимый от AudioAsset список: у одного
+    дня может быть аудио, текст, оба или ничего (§ смена парадигмы, текст не привязан
+    к тем же недельным слокам/дням, что аудио). day_range задаёт дни недели, в которые
+    практика показывается ("1-2", "7", "1-7" — парсится напрямую, см. progression.get_today,
+    в отличие от аудио, где диапазон — просто метаданные, а выбор идёт по фиксированному
+    slot'у). Сам текст — в дочерних TextVariant (один на язык), без файлов: текст лежит
+    прямо в content/modules/*.yaml, как task_text/focus и прочий контент дня."""
+    __tablename__ = "text_assets"
+    __table_args__ = (UniqueConstraint("code"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    module_code: Mapped[str] = mapped_column(ForeignKey("modules.code"))
+    week_n: Mapped[int] = mapped_column(Integer)
+    slot: Mapped[str] = mapped_column(String(8))                              # T1|T2|T3|FINAL (метка, не используется для выбора)
+    code: Mapped[str] = mapped_column(String(64))                             # TEXT_{MOD}_W{n}_{slot}
+    day_range: Mapped[str] = mapped_column(String(16))                        # "1-2"|"7"|"1-7" — реальный ключ выбора
+    title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    theme: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    variants: Mapped[list["TextVariant"]] = relationship(cascade="all, delete-orphan",
+                                                         back_populates="text_asset")
+
+
+class TextVariant(Base):
+    """Одна языковая запись текстовой практики — сам текст медитации для чтения."""
+    __tablename__ = "text_variants"
+    __table_args__ = (UniqueConstraint("text_asset_id", "language"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    text_asset_id: Mapped[int] = mapped_column(ForeignKey("text_assets.id"))
+    language: Mapped[str] = mapped_column(String(8))                          # ru|en|uk…
+    body: Mapped[str] = mapped_column(Text)
+
+    text_asset: Mapped["TextAsset"] = relationship(back_populates="variants")
 
 
 class SelfcheckQuestion(Base):
@@ -491,7 +527,7 @@ class JournalEntry(Base):
     __tablename__ = "journal_entries"
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
-    source_type: Mapped[str] = mapped_column(String(16))                     # task|reflection|final_product|note
+    source_type: Mapped[str] = mapped_column(String(16))                     # task|reflection|final_product|note|practice
     module_code: Mapped[str | None] = mapped_column(String(16), nullable=True)
     week_n: Mapped[int | None] = mapped_column(Integer, nullable=True)
     day_n: Mapped[int | None] = mapped_column(Integer, nullable=True)

@@ -24,6 +24,12 @@ def check_module(data: dict) -> list[str]:
     audio = data.get("audio_map", [])
     if len(audio) != 24:
         issues.append(f"аудио {len(audio)} != 24")
+    # text_map опционален и не привязан к фиксированному числу слотов (§ смена парадигмы:
+    # практика дня может быть аудио, текстом, и тем и другим, или вообще без неё) —
+    # единственное, что проверяем, — уникальность кодов.
+    text_codes = [t["code"] for t in data.get("text_map", []) if t.get("code")]
+    if len(text_codes) != len(set(text_codes)):
+        issues.append("text_map: повторяющиеся code")
     markers = data.get("markers", {})
     for phase in ("morning", "evening"):
         if len(markers.get(phase, [])) != 5:
@@ -74,6 +80,17 @@ def _audio_variant_specs(a: dict):
                          "duration_sec": spec.get("duration_sec"), "size_bytes": spec.get("size_bytes")}
 
 
+def _text_variant_specs(t: dict):
+    """Из записи text_map достаёт (язык, текст) на каждый язык — зеркало
+    _audio_variant_specs, но без файлов: текст лежит прямо в YAML (`text:`), как и
+    остальной языко-зависимый контент (task_text, focus, …). Доп. языки — `texts: {en: "..."}`."""
+    primary_lang = t.get("language", "ru")
+    if t.get("text"):
+        yield primary_lang, t["text"]
+    for lang, body in (t.get("texts") or {}).items():
+        yield lang, body
+
+
 # ── загрузка модуля ──────────────────────────────────────────────────────────
 
 def load_module(db: Session, yaml_path: str | Path, *, validate: bool = True) -> str:
@@ -110,6 +127,8 @@ def load_module(db: Session, yaml_path: str | Path, *, validate: bool = True) ->
             db.delete(mk)
         for a in list(existing.audio):
             db.delete(a)
+        for t in list(existing.texts):
+            db.delete(t)
         if existing.final_product:
             db.delete(existing.final_product)
         if existing.postmodule:
@@ -152,6 +171,18 @@ def load_module(db: Session, yaml_path: str | Path, *, validate: bool = True) ->
                 duration_sec=spec.get("duration_sec"), size_bytes=spec.get("size_bytes"),
                 channel_cache=channel_cache,
             ))
+
+    for t in data.get("text_map", []):
+        text_asset = m.TextAsset(
+            module_code=code, week_n=t["week"], slot=t.get("slot", ""), code=t["code"],
+            day_range=str(t.get("days") or t.get("day_range") or ""),
+            title=t.get("title"), theme=t.get("theme"),
+        )
+        db.add(text_asset)
+        for lang, body in _text_variant_specs(t):
+            if not body:
+                continue
+            text_asset.variants.append(m.TextVariant(language=lang, body=body))
 
     for w in data.get("weeks", []):
         week = m.ModuleWeek(

@@ -11,7 +11,7 @@ from app import models as m
 from app.dependencies import current_user_id, is_internal, owned_enrollment, require_user_id
 from app.services import (intake as intake_svc, progression, postmodule, identity,
                           settings as settings_svc, finalproduct, audio as audio_svc, i18n,
-                          auth as auth_svc, daysteps, linking, push)
+                          auth as auth_svc, daysteps, linking, push, text_content as text_svc)
 
 app = FastAPI(title="Mental Club API", version="0.1.0")
 
@@ -457,6 +457,33 @@ def audio_file(code: str, lang: str = "ru", db: Session = Depends(get_db)):
     if not path.is_file():
         raise HTTPException(404, "audio file missing on disk")
     return FileResponse(path, media_type=r["mime"] or "audio/mpeg", filename=r["storage_key"])
+
+
+@app.get("/api/v1/text/{code}/resolve")
+def text_resolve(code: str, lang: str = "ru", db: Session = Depends(get_db)):
+    """Разрешить текстовую практику в конкретный языковой вариант (с фолбэком на ru) —
+    аналог /audio/{code}/resolve, но тело практики отдаётся сразу, без отдельного файла."""
+    r = text_svc.resolve(db, code, lang)
+    if not r:
+        raise HTTPException(404, "text not found")
+    return r
+
+
+@app.post("/api/v1/enrollments/{eid}/practice-log")
+def practice_log(eid: int, payload: dict = Body(...),
+                  uid: int | None = Depends(current_user_id),
+                  db: Session = Depends(get_db)):
+    """Необязательная отметка «прослушал аудио» / «прочитал текст» в дневник (§ смена
+    парадигмы: текст+аудио). Ничего не блокирует — можно отмечать или не отмечать."""
+    kind = payload.get("kind")
+    if kind not in ("audio", "text"):
+        raise HTTPException(422, "kind должен быть audio или text")
+    code = (payload.get("code") or "").strip()
+    if not code:
+        raise HTTPException(422, "пустой code")
+    enr = _enrollment(db, eid, uid)
+    j = progression.log_practice(db, enr, kind=kind, code=code, title=payload.get("title"))
+    return {"id": j.id}
 
 
 @app.post("/api/v1/enrollments/{eid}/open-day")

@@ -15,7 +15,7 @@
 переход бота на этот эндпоинт не меняет ни одной его формулировки.
 
 Виды шагов (порядок = порядок прохождения):
-  morning:  info(intent)* → focustask → audio?
+  morning:  info(intent)* → focustask → audio? → text?
   evening:  focustask → quiz? → free_text × 3
 """
 from __future__ import annotations
@@ -48,6 +48,10 @@ def _morning(today: dict) -> list[dict]:
     if audio:
         steps.append({"kind": "audio", "code": audio.get("code"),
                       "title": audio.get("title")})
+    text = today.get("text")
+    if text:
+        steps.append({"kind": "text", "code": text.get("code"),
+                      "title": text.get("title")})
     return steps
 
 

@@ -94,7 +94,8 @@ def test_day_steps_matches_bot_builder():
 
     # bot/handlers/flow.py тянет aiogram и соседние модули; нам нужны только два
     # чистых билдера, поэтому выполняем файл с заглушками вместо импорта пакета.
-    src = pathlib.Path("/home/discens/dev/mental/bot/handlers/flow.py").read_text()
+    repo_root = pathlib.Path(__file__).resolve().parents[2]
+    src = (repo_root / "bot/handlers/flow.py").read_text()
     head = src[:src.index("def _phase_summary(")]
     body = head[head.index("def _task_text("):]
     ns: dict = {}
@@ -128,7 +129,8 @@ def test_day_steps_evening_matches_bot_builder():
 
     from app.services import daysteps
 
-    src = _pl.Path("/home/discens/dev/mental/bot/handlers/flow.py").read_text()
+    repo_root = _pl.Path(__file__).resolve().parents[2]
+    src = (repo_root / "bot/handlers/flow.py").read_text()
     head = src[:src.index("def _phase_summary(")]
     body = head[head.index("def _task_text("):]
     ns: dict = {}

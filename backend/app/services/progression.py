@@ -135,6 +135,14 @@ def get_today(db: Session, enrollment: m.Enrollment, *, today: _date | None = No
     slot = {1: "A1", 2: "A1", 3: "A2", 4: "A2", 5: "A3", 6: "A3", 7: "FINAL"}[day.day_n]
     day_audio = next((a for a in audio if a.slot == slot), None)
 
+    texts = db.execute(
+        select(m.TextAsset).where(m.TextAsset.module_code == enrollment.module_code,
+                                  m.TextAsset.week_n == enrollment.current_week)
+    ).scalars().all()
+    # текст дня — независимый от аудио список, диапазон дней читается из day_range напрямую
+    # (не фиксированный slot, как у аудио): каданс текста и аудио может не совпадать.
+    day_text = next((t for t in texts if _day_in_range(day.day_n, t.day_range)), None)
+
     return {
         "status": "active", "done_today": done_today, "session": session,
         "week": enrollment.current_week, "day": day.day_n, "day_title": day_view["title"],
@@ -152,7 +160,38 @@ def get_today(db: Session, enrollment: m.Enrollment, *, today: _date | None = No
         # канал получает отдельным вызовом GET /audio/{code}/resolve?lang=… по требованию.
         "audio": {"code": day_audio.code, "title": day_audio.title}
                  if day_audio and day_audio.variants else None,
+        # текстовая медитация — отдельным вызовом GET /text/{code}/resolve?lang=…
+        "text": {"code": day_text.code, "title": day_text.title}
+                if day_text and day_text.variants else None,
     }
+
+
+def _day_in_range(day_n: int, day_range: str) -> bool:
+    """"1-2" → дни 1 и 2; "7" → только день 7; "1-7" → вся неделя. Пусто/битое → никогда."""
+    day_range = (day_range or "").strip()
+    if not day_range:
+        return False
+    try:
+        if "-" in day_range:
+            lo, hi = day_range.split("-", 1)
+            return int(lo) <= day_n <= int(hi)
+        return day_n == int(day_range)
+    except ValueError:
+        return False
+
+
+def log_practice(db: Session, enrollment: m.Enrollment, *, kind: str, code: str, title: str | None) -> m.JournalEntry:
+    """Необязательная отметка «прослушал аудио» / «прочитал текст» — просто факт в дневник,
+    ничего не блокирует и не гейтит закрытие дня (в отличие от task/reflection)."""
+    label = "🎧 Прослушано" if kind == "audio" else "📖 Прочитано"
+    j = m.JournalEntry(
+        user_id=enrollment.user_id, source_type="practice",
+        module_code=enrollment.module_code, week_n=enrollment.current_week, day_n=enrollment.current_day,
+        text=f"{label}: {title or code}",
+    )
+    db.add(j)
+    db.commit()
+    return j
 
 
 def _reflection_questions(db: Session, enrollment: m.Enrollment, week_n: int, day_n: int) -> list[str]:
