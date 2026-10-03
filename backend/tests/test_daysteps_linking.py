@@ -108,19 +108,21 @@ def test_day_steps_matches_bot_builder():
     theirs = ns["_build_morning_steps"](today)
     assert len(mine) == len(theirs), (len(mine), len(theirs))
 
-    # тексты совпадают побайтово там, где бот их формирует (аудио-шаг текста не несёт
-    # ни у него, ни у нас) — перейдя на эндпоинт, бот не потеряет ни одной формулировки
+    # тексты совпадают побайтово там, где бот их формирует (аудио/текст-шаг текста
+    # не несёт ни у него, ни у нас) — перейдя на эндпоинт, бот не потеряет ни одной формулировки
     for a, b in zip(mine, theirs):
         if "text" in b:
             assert a["text"] == b["text"], b["kind"]
-    # kind совмещённого шага отличается осознанно: бот звал его info, мы — focustask
-    # (приложению нужны структурные поля). Текст при этом тот же.
-    assert theirs[-1 if not today.get("audio") else -2]["kind"] == "info"
 
-    # аудио-шаг несёт тот же код
-    if today.get("audio"):
-        assert mine[-1]["kind"] == theirs[-1]["kind"] == "audio"
-        assert mine[-1]["code"] == theirs[-1]["code"]
+    # хвост дня — необязательные аудио/текст-шаги, каждый независимо (может быть
+    # один, оба или ни одного). kind совмещённого info-шага отличается осознанно:
+    # бот зовёт его info, мы — focustask (приложению нужны структурные поля).
+    tail = [k for k, present in (("audio", today.get("audio")), ("text", today.get("text"))) if present]
+    assert theirs[len(theirs) - len(tail) - 1]["kind"] == "info"
+    for offset, kind in enumerate(tail):
+        idx = len(theirs) - len(tail) + offset
+        assert mine[idx]["kind"] == theirs[idx]["kind"] == kind, (idx, kind)
+        assert mine[idx]["code"] == theirs[idx]["code"]
 
 
 def test_day_steps_evening_matches_bot_builder():

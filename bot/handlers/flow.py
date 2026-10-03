@@ -35,7 +35,7 @@ def _task_text(today: dict) -> str:
 
 
 def _build_morning_steps(today: dict) -> list[dict]:
-    """Утренняя сессия: открыть день — фокус + показ задания (+ аудио)."""
+    """Утренняя сессия: открыть день — фокус + показ задания (+ аудио? + текст?)."""
     steps: list[dict] = []
     for q in today.get("intent_questions") or []:           # W6-спец
         steps.append({"kind": "info", "text": f"🎯 {q}"})
@@ -47,6 +47,11 @@ def _build_morning_steps(today: dict) -> list[dict]:
     if today.get("audio"):
         a = today["audio"]
         steps.append({"kind": "audio", "code": a["code"], "title": a.get("title")})
+    # текст — независимая от аудио запись (своя смена, свой day_range), поэтому у дня
+    # может не быть ни одной, обеих или только одной из них.
+    if today.get("text"):
+        tx = today["text"]
+        steps.append({"kind": "text", "code": tx["code"], "title": tx.get("title")})
     return steps
 
 
@@ -94,6 +99,24 @@ def _scale_pos(ci: int, n: int) -> int:
     if n <= 1:
         return 2
     return 4 - round(ci * 4 / (n - 1))
+
+
+def _chunk_text(s: str, limit: int = 3500) -> list[str]:
+    """Разбить длинный текст практики на сообщения в пределах лимита Telegram (4096)."""
+    if len(s) <= limit:
+        return [s]
+    parts: list[str] = []
+    buf: list[str] = []
+    length = 0
+    for para in s.split("\n\n"):
+        if buf and length + len(para) + 2 > limit:
+            parts.append("\n\n".join(buf))
+            buf, length = [], 0
+        buf.append(para)
+        length += len(para) + 2
+    if buf:
+        parts.append("\n\n".join(buf))
+    return parts
 
 
 # ── запуск дня ────────────────────────────────────────────────────────────────
@@ -181,14 +204,34 @@ async def _render_new(target: Message, state: FSMContext):
     elif k == "info":
         await target.answer(step["text"], reply_markup=next_kb())
     elif k == "audio":
-        # аудио-шаг: кнопка «Слушать» + «Далее»; при «Далее» разметку НЕ убираем,
+        # аудио-шаг: кнопка «Слушать» + «Отметить» + «Далее»; при «Далее» разметку НЕ убираем,
         # чтобы кнопка «Слушать» осталась в чате и запись не «пропадала»
         title = step.get("title") or "Аудио-практика"
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="🎧 Слушать аудио дня", callback_data="daudio")],
+            [InlineKeyboardButton(text="✅ Отметить как прослушано", callback_data="daudio_mark")],
             [InlineKeyboardButton(text="Далее ▶️", callback_data="daudio_next")]])
         await target.answer(f"🎧 <b>{title}</b>\nАудио-практика дня — можно слушать в любой момент.",
                             reply_markup=kb)
+    elif k == "text":
+        # текст — независимая от аудио практика: тело живёт в БД, файла нет, поэтому
+        # показываем сразу (в отличие от аудио, где сначала показывается кнопка «Слушать»).
+        title = step.get("title") or "Текстовая практика"
+        try:
+            info = await api.resolve_text(step["code"], "ru")
+            body = (info.get("body") or "").strip()
+        except Exception:
+            body = ""
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="✅ Отметить как прочитано", callback_data="dtext_read")],
+            [InlineKeyboardButton(text="Далее ▶️", callback_data="dtext_next")]])
+        if not body:
+            await target.answer(f"📖 <b>{title}</b>\n\nТекст пока недоступен.", reply_markup=kb)
+            return
+        parts = _chunk_text(f"📖 <b>{title}</b>\n\n{body}")
+        for part in parts[:-1]:
+            await target.answer(part)
+        await target.answer(parts[-1], reply_markup=kb)
     elif k == "free_text":
         await target.answer(f"✍️ {step['prompt']}\n\n<i>Ответьте текстом или надиктуйте голосовым 🎤</i>",
                             reply_markup=skip_kb())
@@ -305,6 +348,51 @@ async def cb_audio(cb: CallbackQuery, state: FSMContext):
 @router.callback_query(DayStates.running, F.data == "daudio_next")
 async def cb_audio_next(cb: CallbackQuery, state: FSMContext):
     """«Далее» с аудио-шага: НЕ убираем кнопки (аудио остаётся доступным), просто дальше."""
+    await cb.answer()
+    await _next_new(cb.message, state)
+
+
+@router.callback_query(DayStates.running, F.data == "daudio_mark")
+async def cb_audio_mark(cb: CallbackQuery, state: FSMContext):
+    """Отметить аудио-практику прослушанной — пишется в дневник (как и текст)."""
+    data = await state.get_data()
+    step = data["day_steps"][data["day_i"]]
+    if step.get("kind") != "audio":
+        await cb.answer()
+        return
+    try:
+        await api.log_practice(data["eid"], kind="audio", code=step["code"], title=step.get("title"))
+    except Exception:
+        await cb.answer("Не получилось отметить, попробуйте ещё раз")
+        return
+    await cb.answer("Отмечено ✅")
+    await cb.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🎧 Слушать аудио дня", callback_data="daudio")],
+        [InlineKeyboardButton(text="Далее ▶️", callback_data="daudio_next")]]))
+
+
+@router.callback_query(DayStates.running, F.data == "dtext_read")
+async def cb_text_read(cb: CallbackQuery, state: FSMContext):
+    """Отметить текстовую практику прочитанной — пишется в дневник (как и аудио)."""
+    data = await state.get_data()
+    step = data["day_steps"][data["day_i"]]
+    if step.get("kind") != "text":
+        await cb.answer()
+        return
+    try:
+        await api.log_practice(data["eid"], kind="text", code=step["code"], title=step.get("title"))
+    except Exception:
+        await cb.answer("Не получилось отметить, попробуйте ещё раз")
+        return
+    await cb.answer("Отмечено ✅")
+    # кнопку «отметить» убираем — осталось только «Далее»
+    await cb.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Далее ▶️", callback_data="dtext_next")]]))
+
+
+@router.callback_query(DayStates.running, F.data == "dtext_next")
+async def cb_text_next(cb: CallbackQuery, state: FSMContext):
+    """«Далее» с текстового шага: как и аудио — кнопки до этого НЕ убираем, можно перечитать."""
     await cb.answer()
     await _next_new(cb.message, state)
 

@@ -108,6 +108,13 @@ class API:
         return await self._post(f"/api/v1/audio/{code}/cache",
                                {"language": language, "channel": channel, "ref": ref})
 
+    async def resolve_text(self, code: str, lang: str = "ru") -> dict:
+        return await self._get(f"/api/v1/text/{code}/resolve?lang={lang}")
+
+    async def log_practice(self, eid: int, *, kind: str, code: str, title: str | None = None) -> dict:
+        return await self._post(f"/api/v1/enrollments/{eid}/practice-log",
+                               {"kind": kind, "code": code, "title": title})
+
     async def open_day(self, eid: int, **payload) -> dict:
         return await self._post(f"/api/v1/enrollments/{eid}/open-day", payload)
 
