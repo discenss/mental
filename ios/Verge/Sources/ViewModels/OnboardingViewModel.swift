@@ -26,6 +26,9 @@ final class OnboardingViewModel: ObservableObject {
 
     @Published private(set) var isLoading = false
     @Published var error: APIError?
+    /// Код модуля, на который пытались записаться, когда уже идёт другая программа (409)
+    /// — экран должен спросить подтверждение смены, а не застревать в повторе той же ошибки.
+    @Published private(set) var conflictModuleCode: String?
 
     private let api: RidgeAPIProtocol
     private let language: LanguageStore
@@ -143,12 +146,40 @@ final class OnboardingViewModel: ObservableObject {
             step = .reminders
             return true
         } catch let e as APIError {
-            error = e
+            if case .invalidState = e {
+                // уже идёт другая программа (HTTP 409) — спросить подтверждение смены
+                // вместо показа тупиковой ошибки (паритет с ботом: route_switch)
+                conflictModuleCode = moduleCode
+            } else {
+                error = e
+            }
             return false
         } catch {
             self.error = .server(status: 0, message: error.localizedDescription)
             return false
         }
+    }
+
+    /// Подтверждена смена программы: сбросить текущую и повторить запись на выбранную.
+    func confirmSwitchProgram() async {
+        guard let code = conflictModuleCode else { return }
+        conflictModuleCode = nil
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            try await api.abandonActive()
+        } catch let e as APIError {
+            error = e
+            return
+        } catch {
+            self.error = .server(status: 0, message: error.localizedDescription)
+            return
+        }
+        _ = await enroll(in: code)
+    }
+
+    func cancelSwitchProgram() {
+        conflictModuleCode = nil
     }
 
     /// Слоты сохраняются по одному за вызов — так устроен эндпоинт.

@@ -50,6 +50,15 @@ struct OnboardingView: View {
                 }
             }
         }
+        .alert(Text("me.changeRoute"), isPresented: Binding(
+            get: { vm.conflictModuleCode != nil },
+            set: { if !$0 { vm.cancelSwitchProgram() } }
+        )) {
+            Button("common.cancel", role: .cancel) { vm.cancelSwitchProgram() }
+            Button("me.changeRoute", role: .destructive) { Task { await vm.confirmSwitchProgram() } }
+        } message: {
+            Text("me.changeRouteWarning")
+        }
     }
 
     // MARK: - Шапка
