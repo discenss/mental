@@ -475,9 +475,26 @@ async def _sc_ask_marker(target: Message, state: FSMContext, i: int):
 async def _sc_ask_first_question(target: Message, state: FSMContext):
     data = await state.get_data()
     qs = data["sc_questions"]
+    if not qs:
+        # у модуля пока нет недельной самопроверки (например, контент ещё не добавлен) —
+        # завершаем сразу после маркеров, без обращения к qs[0].
+        await _sc_finish(target, state, {})
+        return
     sent = await target.answer(f"🧾 Итоги недели — вопрос 1/{len(qs)}\n\n{qs[0]['question']}",
                                reply_markup=options_kb(qs[0]["options"], "sc"))
     await state.update_data(sc_msg_id=sent.message_id)
+
+
+async def _sc_finish(target: Message, state: FSMContext, answers: dict[str, int]):
+    data = await state.get_data()
+    await target.answer("🧾 Подвожу итоги недели…")
+    res = await api.selfcheck(data["eid"], {int(k): v for k, v in answers.items()},
+                              morning=data.get("sc_morning"), evening=data.get("sc_evening"))
+    await state.set_state(None)
+    await target.answer(
+        texts.selfcheck_result(res),
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(text="🪞 Разбор недели (ИИ)", callback_data="week_insight")]]))
 
 
 @router.callback_query(SelfcheckStates.answering, F.data.startswith("scmk:"))
@@ -526,14 +543,7 @@ async def cb_sc_answer(cb: CallbackQuery, state: FSMContext):
         await cb.message.edit_text(f"🧾 Итоги недели — вопрос {i + 2}/{len(qs)}\n\n{qs[i + 1]['question']}",
                                    reply_markup=options_kb(qs[i + 1]["options"], "sc"))
         return
-    await cb.message.edit_text("🧾 Подвожу итоги недели…")
-    res = await api.selfcheck(data["eid"], {int(k): v for k, v in answers.items()},
-                              morning=data.get("sc_morning"), evening=data.get("sc_evening"))
-    await state.set_state(None)
-    await cb.message.answer(
-        texts.selfcheck_result(res),
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
-            InlineKeyboardButton(text="🪞 Разбор недели (ИИ)", callback_data="week_insight")]]))
+    await _sc_finish(cb.message, state, answers)
 
 
 @router.callback_query(F.data == "week_insight")

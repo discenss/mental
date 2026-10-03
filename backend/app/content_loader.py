@@ -21,12 +21,13 @@ def check_module(data: dict) -> list[str]:
     weeks = data.get("weeks", [])
     if len(weeks) != 6:
         issues.append(f"недель {len(weeks)} != 6")
-    audio = data.get("audio_map", [])
-    if len(audio) != 24:
-        issues.append(f"аудио {len(audio)} != 24")
-    # text_map опционален и не привязан к фиксированному числу слотов (§ смена парадигмы:
-    # практика дня может быть аудио, текстом, и тем и другим, или вообще без неё) —
-    # единственное, что проверяем, — уникальность кодов.
+    # audio_map/text_map опциональны и не привязаны к фиксированному числу слотов
+    # (§ смена парадигмы: практика дня может быть аудио, текстом, и тем и другим, или
+    # вообще без неё, и число записей может меняться по мере того, как контент
+    # дозаписывается/дописывается) — единственное, что проверяем, — уникальность кодов.
+    audio_codes = [a["code"] for a in data.get("audio_map", []) if a.get("code")]
+    if len(audio_codes) != len(set(audio_codes)):
+        issues.append("audio_map: повторяющиеся code")
     text_codes = [t["code"] for t in data.get("text_map", []) if t.get("code")]
     if len(text_codes) != len(set(text_codes)):
         issues.append("text_map: повторяющиеся code")
@@ -42,8 +43,10 @@ def check_module(data: dict) -> list[str]:
         for d in days:
             if len(d.get("reflection", [])) != 3:
                 issues.append(f"W{n}D{d.get('d')}: рефлексий != 3")
+        # недельная самопроверка опциональна (можно пока не добавлять для части недель),
+        # но если она есть — должна быть полной: ровно 10 вопросов.
         sc = w.get("selfcheck", [])
-        if len(sc) != 10:
+        if sc and len(sc) != 10:
             issues.append(f"W{n}: самопроверка {len(sc)} != 10")
         # зоны: покрытие [core_min, core_max] без разрывов
         core_min = sum(min(o.get("weight", 0) for o in q["options"]) for q in sc if q.get("kind") == "core")
