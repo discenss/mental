@@ -20,6 +20,10 @@ backups/
 !**/.env.prod.example
 cred.txt
 
+# секреты, которые монтируются в контейнеры (APNs .p8 и т.п.) — НИКОГДА не в git
+secrets/
+*.p8
+
 # iOS: генерируемые артефакты и личные идентификаторы
 ios/**/*.xcodeproj/
 ios/**/*.xcworkspace/

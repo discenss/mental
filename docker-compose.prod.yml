@@ -36,6 +36,7 @@ services:
       - CONTENT_DIR=/content
     volumes:
       - ./content:/content:ro          # YAML-контент (intake + модули + audio)
+      - ./secrets:/secrets:ro          # APNs .p8 и прочие файловые секреты (APNS_KEY_PATH)
     networks: [mental-network]
     restart: unless-stopped
     depends_on:
