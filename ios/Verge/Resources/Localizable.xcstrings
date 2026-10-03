@@ -1376,6 +1376,61 @@
         }
       }
     },
+    "today.text": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Текст"
+          }
+        }
+      }
+    },
+    "today.markListened": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отметить как прослушано"
+          }
+        }
+      }
+    },
+    "today.listened": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Прослушано"
+          }
+        }
+      }
+    },
+    "today.markRead": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отметить как прочитано"
+          }
+        }
+      }
+    },
+    "today.textRead": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Прочитано"
+          }
+        }
+      }
+    },
     "today.chooseRoute": {
       "extractionState": "manual",
       "localizations": {

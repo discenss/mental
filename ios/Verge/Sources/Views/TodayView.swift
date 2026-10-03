@@ -207,8 +207,13 @@ struct TodayView: View {
             }
         }
 
-        if let audio = vm.audioStep, let code = audio.code {
-            AudioCard(code: code, title: audio.title)
+        if let audio = vm.audioStep, let code = audio.code, let eid = vm.eid {
+            AudioCard(eid: eid, code: code, title: audio.title)
+                .staggerIn(index: 5)
+        }
+
+        if let text = vm.textStep, let code = text.code, let eid = vm.eid {
+            TextCard(eid: eid, code: code, title: text.title)
                 .staggerIn(index: 5)
         }
 

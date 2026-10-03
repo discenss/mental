@@ -89,6 +89,7 @@ enum DayStepKind: String, Codable, Sendable {
     case info
     case focustask
     case audio
+    case text
     case quiz
     case freeText = "free_text"
     case unknown
@@ -103,6 +104,7 @@ enum DayStepKind: String, Codable, Sendable {
         case .info:      return "text.alignleft"
         case .focustask: return "target"
         case .audio:     return "headphones"
+        case .text:      return "book.pages"
         case .quiz:      return "checklist"
         case .freeText:  return "square.and.pencil"
         case .unknown:   return "questionmark.circle"

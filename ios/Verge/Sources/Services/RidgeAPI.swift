@@ -98,6 +98,8 @@ protocol RidgeAPIProtocol: Sendable {
     func askAI(question: String, context: String?) async throws -> AskAIResponse
     func resolveAudio(code: String, lang: String) async throws -> AudioResolve
     func audioFileURL(code: String, lang: String) -> URL?
+    func resolveText(code: String, lang: String) async throws -> TextResolve
+    func logPractice(eid: Int, kind: String, code: String, title: String?) async throws
     func updateSettings(slot: String?, hour: Int?, minute: Int?,
                         timezone: String?, language: String?) async throws
     func registerDevice(token: String, sandbox: Bool, language: String?) async throws
@@ -331,6 +333,19 @@ actor RidgeAPI: RidgeAPIProtocol {
     /// (публичный базовый URL для аудио ещё не настроен на бэкенде).
     nonisolated func audioFileURL(code: String, lang: String = "ru") -> URL? {
         URL(string: "\(baseURL)/api/v1/audio/\(code)/file?lang=\(lang)")
+    }
+
+    func resolveText(code: String, lang: String = "ru") async throws -> TextResolve {
+        try await get("/api/v1/text/\(code)/resolve?lang=\(lang)")
+    }
+
+    /// Отметка «прослушано»/«прочитано» — пишется в дневник (§ практика дня).
+    func logPractice(eid: Int, kind: String, code: String, title: String? = nil) async throws {
+        let _: EmptyResponse = try await post("/api/v1/enrollments/\(eid)/practice-log", json: [
+            "kind": kind,
+            "code": code,
+            "title": title as Any,
+        ])
     }
 
     func updateSettings(slot: String?, hour: Int?, minute: Int?,

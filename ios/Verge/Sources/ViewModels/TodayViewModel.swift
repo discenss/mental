@@ -48,6 +48,7 @@ final class TodayViewModel: ObservableObject {
     var quizStep: DayStep? { steps.first { $0.kind == .quiz } }
     var focusStep: DayStep? { steps.first { $0.kind == .focustask } }
     var audioStep: DayStep? { steps.first { $0.kind == .audio } }
+    var textStep: DayStep? { steps.first { $0.kind == .text } }
     var intentSteps: [DayStep] { steps.filter { $0.kind == .info } }
 
     // MARK: - Загрузка

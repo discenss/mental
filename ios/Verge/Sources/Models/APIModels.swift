@@ -573,6 +573,20 @@ struct AudioResolve: Codable, Sendable {
     }
 }
 
+/// Текстовая практика — независимая от аудио сущность (своё тело, свой `day_range`).
+/// В отличие от аудио, тело приходит целиком в ответе — файла нет.
+struct TextResolve: Codable, Sendable {
+    let code: String
+    let title: String?
+    let language: String?
+    let body: String
+    let fallback: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case code, title, language, body, fallback
+    }
+}
+
 struct AskAIResponse: Codable, Sendable {
     let enabled: Bool?
     let text: String?

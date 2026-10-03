@@ -173,6 +173,21 @@ final class MockAPI: RidgeAPIProtocol, @unchecked Sendable {
         URL(string: "https://example.invalid/\(code)")
     }
 
+    func resolveText(code: String, lang: String) async throws -> TextResolve {
+        try checkError()
+        return TextResolve(code: code, title: "Текстовая практика", language: lang,
+                           body: "Пример текста практики дня.", fallback: false)
+    }
+
+    private(set) var logPracticeCallCount = 0
+    private(set) var lastPracticeLog: (kind: String, code: String)?
+
+    func logPractice(eid: Int, kind: String, code: String, title: String?) async throws {
+        try checkError()
+        logPracticeCallCount += 1
+        lastPracticeLog = (kind, code)
+    }
+
     func updateSettings(slot: String?, hour: Int?, minute: Int?,
                         timezone: String?, language: String?) async throws {
         try checkError()

@@ -7,6 +7,7 @@ import SwiftUI
 /// Адрес файла берётся из `/audio/{code}/resolve?lang=`; если бэкенд не отдал `url`
 /// (публичный базовый адрес ещё не настроен), играем напрямую с `/audio/{code}/file`.
 struct AudioCard: View {
+    let eid: Int
     let code: String
     let title: String?
 
@@ -51,6 +52,8 @@ struct AudioCard: View {
                     .font(t.font.caption)
                     .foregroundStyle(t.inkDim)
             }
+
+            MarkPracticeButton(eid: eid, kind: "audio", code: code, title: title)
         }
         .task {
             await player.prepare(code: code, language: language.current.rawValue)
@@ -130,7 +133,7 @@ final class AudioPlayer: NSObject, ObservableObject {
 }
 
 #Preview {
-    AudioCard(code: "AUDIO_BOUND_W1_A1", title: "Практика первой недели")
+    AudioCard(eid: 1, code: "AUDIO_BOUND_W1_A1", title: "Практика первой недели")
         .padding()
         .environmentObject(LanguageStore.shared)
         .environment(\.theme, .warm)
