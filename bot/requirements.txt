@@ -1,4 +1,4 @@
-aiogram>=3.13,<3.14
+aiogram>=3.31.0,<3.32
 httpx
 python-dotenv
 apscheduler>=3.10,<4
