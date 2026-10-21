@@ -7,7 +7,7 @@ pydantic-settings
 pyyaml
 psycopg[binary]
 openai>=1.0
-anthropic>=0.39
+anthropic>=1.15.0
 pytz
 pyjwt[crypto]>=2.8
 httpx[http2]
