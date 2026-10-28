@@ -3,4 +3,4 @@ httpx
 python-dotenv
 apscheduler>=3.10,<4
 pytz
-openai>=1.0
+openai>=3.37.0
